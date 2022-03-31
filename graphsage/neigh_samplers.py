@@ -4,7 +4,7 @@ from __future__ import print_function
 from graphsage.layers import Layer
 
 import tensorflow as tf
-flags = tf.app.flags
+flags = tf.compat.v1.flags
 FLAGS = flags.FLAGS
 
 
@@ -23,7 +23,7 @@ class UniformNeighborSampler(Layer):
 
     def _call(self, inputs):
         ids, num_samples = inputs
-        adj_lists = tf.nn.embedding_lookup(self.adj_info, ids) 
-        adj_lists = tf.transpose(tf.random_shuffle(tf.transpose(adj_lists)))
+        adj_lists = tf.nn.embedding_lookup(params=self.adj_info, ids=ids) 
+        adj_lists = tf.transpose(a=tf.random.shuffle(tf.transpose(a=adj_lists)))
         adj_lists = tf.slice(adj_lists, [0,0], [-1, num_samples])
         return adj_lists

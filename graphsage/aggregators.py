@@ -26,7 +26,7 @@ class MeanAggregator(Layer):
         else:
             name = ''
 
-        with tf.variable_scope(self.name + name + '_vars'):
+        with tf.compat.v1.variable_scope(self.name + name + '_vars'):
             self.vars['neigh_weights'] = glorot([neigh_input_dim, output_dim],
                                                         name='neigh_weights')
             self.vars['self_weights'] = glorot([input_dim, output_dim],
@@ -43,9 +43,9 @@ class MeanAggregator(Layer):
     def _call(self, inputs):
         self_vecs, neigh_vecs = inputs
 
-        neigh_vecs = tf.nn.dropout(neigh_vecs, 1-self.dropout)
-        self_vecs = tf.nn.dropout(self_vecs, 1-self.dropout)
-        neigh_means = tf.reduce_mean(neigh_vecs, axis=1)
+        neigh_vecs = tf.nn.dropout(neigh_vecs, rate=1 - (1-self.dropout))
+        self_vecs = tf.nn.dropout(self_vecs, rate=1 - (1-self.dropout))
+        neigh_means = tf.reduce_mean(input_tensor=neigh_vecs, axis=1)
        
         # [nodes] x [out_dim]
         from_neighs = tf.matmul(neigh_means, self.vars['neigh_weights'])
@@ -86,7 +86,7 @@ class GCNAggregator(Layer):
         else:
             name = ''
 
-        with tf.variable_scope(self.name + name + '_vars'):
+        with tf.compat.v1.variable_scope(self.name + name + '_vars'):
             self.vars['weights'] = glorot([neigh_input_dim, output_dim],
                                                         name='neigh_weights')
             if self.bias:
@@ -101,9 +101,9 @@ class GCNAggregator(Layer):
     def _call(self, inputs):
         self_vecs, neigh_vecs = inputs
 
-        neigh_vecs = tf.nn.dropout(neigh_vecs, 1-self.dropout)
-        self_vecs = tf.nn.dropout(self_vecs, 1-self.dropout)
-        means = tf.reduce_mean(tf.concat([neigh_vecs, 
+        neigh_vecs = tf.nn.dropout(neigh_vecs, rate=1 - (1-self.dropout))
+        self_vecs = tf.nn.dropout(self_vecs, rate=1 - (1-self.dropout))
+        means = tf.reduce_mean(input_tensor=tf.concat([neigh_vecs, 
             tf.expand_dims(self_vecs, axis=1)], axis=1), axis=1)
        
         # [nodes] x [out_dim]
@@ -149,7 +149,7 @@ class MaxPoolingAggregator(Layer):
                                  sparse_inputs=False,
                                  logging=self.logging))
 
-        with tf.variable_scope(self.name + name + '_vars'):
+        with tf.compat.v1.variable_scope(self.name + name + '_vars'):
             self.vars['neigh_weights'] = glorot([hidden_dim, output_dim],
                                                         name='neigh_weights')
            
@@ -169,7 +169,7 @@ class MaxPoolingAggregator(Layer):
         self_vecs, neigh_vecs = inputs
         neigh_h = neigh_vecs
 
-        dims = tf.shape(neigh_h)
+        dims = tf.shape(input=neigh_h)
         batch_size = dims[0]
         num_neighbors = dims[1]
         # [nodes * sampled neighbors] x [hidden_dim]
@@ -178,7 +178,7 @@ class MaxPoolingAggregator(Layer):
         for l in self.mlp_layers:
             h_reshaped = l(h_reshaped)
         neigh_h = tf.reshape(h_reshaped, (batch_size, num_neighbors, self.hidden_dim))
-        neigh_h = tf.reduce_max(neigh_h, axis=1)
+        neigh_h = tf.reduce_max(input_tensor=neigh_h, axis=1)
         
         from_neighs = tf.matmul(neigh_h, self.vars['neigh_weights'])
         from_self = tf.matmul(self_vecs, self.vars["self_weights"])
@@ -227,7 +227,7 @@ class MeanPoolingAggregator(Layer):
                                  sparse_inputs=False,
                                  logging=self.logging))
 
-        with tf.variable_scope(self.name + name + '_vars'):
+        with tf.compat.v1.variable_scope(self.name + name + '_vars'):
             self.vars['neigh_weights'] = glorot([hidden_dim, output_dim],
                                                         name='neigh_weights')
            
@@ -247,7 +247,7 @@ class MeanPoolingAggregator(Layer):
         self_vecs, neigh_vecs = inputs
         neigh_h = neigh_vecs
 
-        dims = tf.shape(neigh_h)
+        dims = tf.shape(input=neigh_h)
         batch_size = dims[0]
         num_neighbors = dims[1]
         # [nodes * sampled neighbors] x [hidden_dim]
@@ -256,7 +256,7 @@ class MeanPoolingAggregator(Layer):
         for l in self.mlp_layers:
             h_reshaped = l(h_reshaped)
         neigh_h = tf.reshape(h_reshaped, (batch_size, num_neighbors, self.hidden_dim))
-        neigh_h = tf.reduce_mean(neigh_h, axis=1)
+        neigh_h = tf.reduce_mean(input_tensor=neigh_h, axis=1)
         
         from_neighs = tf.matmul(neigh_h, self.vars['neigh_weights'])
         from_self = tf.matmul(self_vecs, self.vars["self_weights"])
@@ -315,7 +315,7 @@ class TwoMaxLayerPoolingAggregator(Layer):
                                  logging=self.logging))
 
 
-        with tf.variable_scope(self.name + name + '_vars'):
+        with tf.compat.v1.variable_scope(self.name + name + '_vars'):
             self.vars['neigh_weights'] = glorot([hidden_dim_2, output_dim],
                                                         name='neigh_weights')
            
@@ -335,7 +335,7 @@ class TwoMaxLayerPoolingAggregator(Layer):
         self_vecs, neigh_vecs = inputs
         neigh_h = neigh_vecs
 
-        dims = tf.shape(neigh_h)
+        dims = tf.shape(input=neigh_h)
         batch_size = dims[0]
         num_neighbors = dims[1]
         # [nodes * sampled neighbors] x [hidden_dim]
@@ -344,7 +344,7 @@ class TwoMaxLayerPoolingAggregator(Layer):
         for l in self.mlp_layers:
             h_reshaped = l(h_reshaped)
         neigh_h = tf.reshape(h_reshaped, (batch_size, num_neighbors, self.hidden_dim_2))
-        neigh_h = tf.reduce_max(neigh_h, axis=1)
+        neigh_h = tf.reduce_max(input_tensor=neigh_h, axis=1)
         
         from_neighs = tf.matmul(neigh_h, self.vars['neigh_weights'])
         from_self = tf.matmul(self_vecs, self.vars["self_weights"])
@@ -385,7 +385,7 @@ class SeqAggregator(Layer):
         elif model_size == "big":
             hidden_dim = self.hidden_dim = 256
 
-        with tf.variable_scope(self.name + name + '_vars'):
+        with tf.compat.v1.variable_scope(self.name + name + '_vars'):
             self.vars['neigh_weights'] = glorot([hidden_dim, output_dim],
                                                         name='neigh_weights')
            
@@ -400,33 +400,33 @@ class SeqAggregator(Layer):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.neigh_input_dim = neigh_input_dim
-        self.cell = tf.contrib.rnn.BasicLSTMCell(self.hidden_dim)
+        self.cell = tf.compat.v1.nn.rnn_cell.BasicLSTMCell(self.hidden_dim)
 
     def _call(self, inputs):
         self_vecs, neigh_vecs = inputs
 
-        dims = tf.shape(neigh_vecs)
+        dims = tf.shape(input=neigh_vecs)
         batch_size = dims[0]
         initial_state = self.cell.zero_state(batch_size, tf.float32)
-        used = tf.sign(tf.reduce_max(tf.abs(neigh_vecs), axis=2))
-        length = tf.reduce_sum(used, axis=1)
+        used = tf.sign(tf.reduce_max(input_tensor=tf.abs(neigh_vecs), axis=2))
+        length = tf.reduce_sum(input_tensor=used, axis=1)
         length = tf.maximum(length, tf.constant(1.))
         length = tf.cast(length, tf.int32)
 
-        with tf.variable_scope(self.name) as scope:
+        with tf.compat.v1.variable_scope(self.name) as scope:
             try:
-                rnn_outputs, rnn_states = tf.nn.dynamic_rnn(
+                rnn_outputs, rnn_states = tf.compat.v1.nn.dynamic_rnn(
                         self.cell, neigh_vecs,
                         initial_state=initial_state, dtype=tf.float32, time_major=False,
                         sequence_length=length)
             except ValueError:
                 scope.reuse_variables()
-                rnn_outputs, rnn_states = tf.nn.dynamic_rnn(
+                rnn_outputs, rnn_states = tf.compat.v1.nn.dynamic_rnn(
                         self.cell, neigh_vecs,
                         initial_state=initial_state, dtype=tf.float32, time_major=False,
                         sequence_length=length)
-        batch_size = tf.shape(rnn_outputs)[0]
-        max_len = tf.shape(rnn_outputs)[1]
+        batch_size = tf.shape(input=rnn_outputs)[0]
+        max_len = tf.shape(input=rnn_outputs)[1]
         out_size = int(rnn_outputs.get_shape()[2])
         index = tf.range(0, batch_size) * max_len + (length - 1)
         flat = tf.reshape(rnn_outputs, [-1, out_size])

@@ -9,7 +9,7 @@ import graphsage.metrics as metrics
 from .prediction import BipartiteEdgePredLayer
 from .aggregators import MeanAggregator, MaxPoolingAggregator, MeanPoolingAggregator, SeqAggregator, GCNAggregator
 
-flags = tf.app.flags
+flags = tf.compat.v1.flags
 FLAGS = flags.FLAGS
 
 # DISCLAIMER:
@@ -49,7 +49,7 @@ class Model(object):
 
     def build(self):
         """ Wrapper for _build() """
-        with tf.variable_scope(self.name):
+        with tf.compat.v1.variable_scope(self.name):
             self._build()
 
         # Build sequential layer model
@@ -60,7 +60,7 @@ class Model(object):
         self.outputs = self.activations[-1]
 
         # Store model variables for easy access
-        variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.name)
+        variables = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope=self.name)
         self.vars = {var.name: var for var in variables}
 
         # Build metrics
@@ -81,14 +81,14 @@ class Model(object):
     def save(self, sess=None):
         if not sess:
             raise AttributeError("TensorFlow session not provided.")
-        saver = tf.train.Saver(self.vars)
+        saver = tf.compat.v1.train.Saver(self.vars)
         save_path = saver.save(sess, "tmp/%s.ckpt" % self.name)
         print("Model saved in file: %s" % save_path)
 
     def load(self, sess=None):
         if not sess:
             raise AttributeError("TensorFlow session not provided.")
-        saver = tf.train.Saver(self.vars)
+        saver = tf.compat.v1.train.Saver(self.vars)
         save_path = "tmp/%s.ckpt" % self.name
         saver.restore(sess, save_path)
         print("Model restored from file: %s" % save_path)
@@ -108,7 +108,7 @@ class MLP(Model):
         self.inputs = placeholders['features']
         self.labels = placeholders['labels']
 
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
+        self.optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
 
         self.build()
 
@@ -124,7 +124,7 @@ class MLP(Model):
         # L2
         else:
             diff = self.labels - self.outputs
-            self.loss += tf.reduce_sum(tf.sqrt(tf.reduce_sum(diff * diff, axis=1)))
+            self.loss += tf.reduce_sum(input_tensor=tf.sqrt(tf.reduce_sum(input_tensor=diff * diff, axis=1)))
 
     def _accuracy(self):
         if self.categorical:
@@ -162,11 +162,11 @@ class GeneralizedModel(Model):
 
     def build(self):
         """ Wrapper for _build() """
-        with tf.variable_scope(self.name):
+        with tf.compat.v1.variable_scope(self.name):
             self._build()
 
         # Store model variables for easy access
-        variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.name)
+        variables = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope=self.name)
         self.vars = {var.name: var for var in variables}
 
         # Build metrics
@@ -227,7 +227,7 @@ class SampleAndAggregate(GeneralizedModel):
         self.model_size = model_size
         self.adj_info = adj
         if identity_dim > 0:
-           self.embeds = tf.get_variable("node_embeddings", [adj.get_shape().as_list()[0], identity_dim])
+           self.embeds = tf.compat.v1.get_variable("node_embeddings", [adj.get_shape().as_list()[0], identity_dim])
         else:
            self.embeds = None
         if features is None: 
@@ -247,7 +247,7 @@ class SampleAndAggregate(GeneralizedModel):
         self.placeholders = placeholders
         self.layer_infos = layer_infos
 
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
+        self.optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
 
         self.build()
 
@@ -296,7 +296,7 @@ class SampleAndAggregate(GeneralizedModel):
             batch_size = self.batch_size
 
         # length: number of layers + 1
-        hidden = [tf.nn.embedding_lookup(input_features, node_samples) for node_samples in samples]
+        hidden = [tf.nn.embedding_lookup(params=input_features, ids=node_samples) for node_samples in samples]
         new_agg = aggregators is None
         if new_agg:
             aggregators = []
@@ -388,7 +388,7 @@ class SampleAndAggregate(GeneralizedModel):
                 self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
 
         self.loss += self.link_pred_layer.loss(self.outputs1, self.outputs2, self.neg_outputs) 
-        tf.summary.scalar('loss', self.loss)
+        tf.compat.v1.summary.scalar('loss', self.loss)
 
     def _accuracy(self):
         # shape: [batch_size]
@@ -398,11 +398,11 @@ class SampleAndAggregate(GeneralizedModel):
         self.neg_aff = tf.reshape(self.neg_aff, [self.batch_size, FLAGS.neg_sample_size])
         _aff = tf.expand_dims(aff, axis=1)
         self.aff_all = tf.concat(axis=1, values=[self.neg_aff, _aff])
-        size = tf.shape(self.aff_all)[1]
+        size = tf.shape(input=self.aff_all)[1]
         _, indices_of_ranks = tf.nn.top_k(self.aff_all, k=size)
         _, self.ranks = tf.nn.top_k(-indices_of_ranks, k=size)
-        self.mrr = tf.reduce_mean(tf.div(1.0, tf.cast(self.ranks[:, -1] + 1, tf.float32)))
-        tf.summary.scalar('mrr', self.mrr)
+        self.mrr = tf.reduce_mean(input_tensor=tf.compat.v1.div(1.0, tf.cast(self.ranks[:, -1] + 1, tf.float32)))
+        tf.compat.v1.summary.scalar('mrr', self.mrr)
 
 
 class Node2VecModel(GeneralizedModel):
@@ -429,17 +429,17 @@ class Node2VecModel(GeneralizedModel):
 
         # following the tensorflow word2vec tutorial
         self.target_embeds = tf.Variable(
-                tf.random_uniform([dict_size, nodevec_dim], -1, 1),
+                tf.random.uniform([dict_size, nodevec_dim], -1, 1),
                 name="target_embeds")
         self.context_embeds = tf.Variable(
-                tf.truncated_normal([dict_size, nodevec_dim],
+                tf.random.truncated_normal([dict_size, nodevec_dim],
                 stddev=1.0 / math.sqrt(nodevec_dim)),
                 name="context_embeds")
         self.context_bias = tf.Variable(
                 tf.zeros([dict_size]),
                 name="context_bias")
 
-        self.optimizer = tf.train.GradientDescentOptimizer(learning_rate=lr)
+        self.optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=lr)
 
         self.build()
 
@@ -456,11 +456,11 @@ class Node2VecModel(GeneralizedModel):
             distortion=0.75,
             unigrams=self.degrees.tolist()))
 
-        self.outputs1 = tf.nn.embedding_lookup(self.target_embeds, self.inputs1)
-        self.outputs2 = tf.nn.embedding_lookup(self.context_embeds, self.inputs2)
-        self.outputs2_bias = tf.nn.embedding_lookup(self.context_bias, self.inputs2)
-        self.neg_outputs = tf.nn.embedding_lookup(self.context_embeds, self.neg_samples)
-        self.neg_outputs_bias = tf.nn.embedding_lookup(self.context_bias, self.neg_samples)
+        self.outputs1 = tf.nn.embedding_lookup(params=self.target_embeds, ids=self.inputs1)
+        self.outputs2 = tf.nn.embedding_lookup(params=self.context_embeds, ids=self.inputs2)
+        self.outputs2_bias = tf.nn.embedding_lookup(params=self.context_bias, ids=self.inputs2)
+        self.neg_outputs = tf.nn.embedding_lookup(params=self.context_embeds, ids=self.neg_samples)
+        self.neg_outputs_bias = tf.nn.embedding_lookup(params=self.context_bias, ids=self.neg_samples)
 
         self.link_pred_layer = BipartiteEdgePredLayer(self.hidden_dim, self.hidden_dim,
                 self.placeholders, bilinear_weights=False)
@@ -476,15 +476,15 @@ class Node2VecModel(GeneralizedModel):
         self.opt_op = self.optimizer.minimize(self.loss)
 
     def _loss(self):
-        aff = tf.reduce_sum(tf.multiply(self.outputs1, self.outputs2), 1) + self.outputs2_bias
-        neg_aff = tf.matmul(self.outputs1, tf.transpose(self.neg_outputs)) + self.neg_outputs_bias
+        aff = tf.reduce_sum(input_tensor=tf.multiply(self.outputs1, self.outputs2), axis=1) + self.outputs2_bias
+        neg_aff = tf.matmul(self.outputs1, tf.transpose(a=self.neg_outputs)) + self.neg_outputs_bias
         true_xent = tf.nn.sigmoid_cross_entropy_with_logits(
                 labels=tf.ones_like(aff), logits=aff)
         negative_xent = tf.nn.sigmoid_cross_entropy_with_logits(
                 labels=tf.zeros_like(neg_aff), logits=neg_aff)
-        loss = tf.reduce_sum(true_xent) + tf.reduce_sum(negative_xent)
+        loss = tf.reduce_sum(input_tensor=true_xent) + tf.reduce_sum(input_tensor=negative_xent)
         self.loss = loss / tf.cast(self.batch_size, tf.float32)
-        tf.summary.scalar('loss', self.loss)
+        tf.compat.v1.summary.scalar('loss', self.loss)
         
     def _accuracy(self):
         # shape: [batch_size]
@@ -494,8 +494,8 @@ class Node2VecModel(GeneralizedModel):
         self.neg_aff = tf.reshape(self.neg_aff, [self.batch_size, FLAGS.neg_sample_size])
         _aff = tf.expand_dims(aff, axis=1)
         self.aff_all = tf.concat(axis=1, values=[self.neg_aff, _aff])
-        size = tf.shape(self.aff_all)[1]
+        size = tf.shape(input=self.aff_all)[1]
         _, indices_of_ranks = tf.nn.top_k(self.aff_all, k=size)
         _, self.ranks = tf.nn.top_k(-indices_of_ranks, k=size)
-        self.mrr = tf.reduce_mean(tf.div(1.0, tf.cast(self.ranks[:, -1] + 1, tf.float32)))
-        tf.summary.scalar('mrr', self.mrr)
+        self.mrr = tf.reduce_mean(input_tensor=tf.compat.v1.div(1.0, tf.cast(self.ranks[:, -1] + 1, tf.float32)))
+        tf.compat.v1.summary.scalar('mrr', self.mrr)

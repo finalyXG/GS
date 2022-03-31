@@ -19,13 +19,13 @@ os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 # Set random seed
 seed = 123
 np.random.seed(seed)
-tf.set_random_seed(seed)
+tf.random.set_seed(seed)
 
 # Settings
-flags = tf.app.flags
+flags = tf.compat.v1.flags
 FLAGS = flags.FLAGS
 
-tf.app.flags.DEFINE_boolean('log_device_placement', False,
+tf.compat.v1.flags.DEFINE_boolean('log_device_placement', False,
                             """Whether to log device placement.""")
 #core params..
 flags.DEFINE_string('model', 'graphsage_mean', 'model names. See README for possible values.')  
@@ -112,10 +112,10 @@ def incremental_evaluate(sess, model, minibatch_iter, size, test=False):
 def construct_placeholders(num_classes):
     # Define placeholders
     placeholders = {
-        'labels' : tf.placeholder(tf.float32, shape=(None, num_classes), name='labels'),
-        'batch' : tf.placeholder(tf.int32, shape=(None), name='batch1'),
-        'dropout': tf.placeholder_with_default(0., shape=(), name='dropout'),
-        'batch_size' : tf.placeholder(tf.int32, name='batch_size'),
+        'labels' : tf.compat.v1.placeholder(tf.float32, shape=(None, num_classes), name='labels'),
+        'batch' : tf.compat.v1.placeholder(tf.int32, shape=(None), name='batch1'),
+        'dropout': tf.compat.v1.placeholder_with_default(0., shape=(), name='dropout'),
+        'batch_size' : tf.compat.v1.placeholder(tf.int32, name='batch_size'),
     }
     return placeholders
 
@@ -144,7 +144,7 @@ def train(train_data, test_data=None):
             batch_size=FLAGS.batch_size,
             max_degree=FLAGS.max_degree, 
             context_pairs = context_pairs)
-    adj_info_ph = tf.placeholder(tf.int32, shape=minibatch.adj.shape)
+    adj_info_ph = tf.compat.v1.placeholder(tf.int32, shape=minibatch.adj.shape)
     adj_info = tf.Variable(adj_info_ph, trainable=False, name="adj_info")
 
     if FLAGS.model == 'graphsage_mean':
@@ -238,18 +238,18 @@ def train(train_data, test_data=None):
     else:
         raise Exception('Error: model name unrecognized.')
 
-    config = tf.ConfigProto(log_device_placement=FLAGS.log_device_placement)
+    config = tf.compat.v1.ConfigProto(log_device_placement=FLAGS.log_device_placement)
     config.gpu_options.allow_growth = True
     #config.gpu_options.per_process_gpu_memory_fraction = GPU_MEM_FRACTION
     config.allow_soft_placement = True
     
     # Initialize session
-    sess = tf.Session(config=config)
-    merged = tf.summary.merge_all()
-    summary_writer = tf.summary.FileWriter(log_dir(), sess.graph)
+    sess = tf.compat.v1.Session(config=config)
+    merged = tf.compat.v1.summary.merge_all()
+    summary_writer = tf.compat.v1.summary.FileWriter(log_dir(), sess.graph)
      
     # Init variables
-    sess.run(tf.global_variables_initializer(), feed_dict={adj_info_ph: minibatch.adj})
+    sess.run(tf.compat.v1.global_variables_initializer(), feed_dict={adj_info_ph: minibatch.adj})
     
     # Train model
     
@@ -257,8 +257,8 @@ def train(train_data, test_data=None):
     avg_time = 0.0
     epoch_val_costs = []
 
-    train_adj_info = tf.assign(adj_info, minibatch.adj)
-    val_adj_info = tf.assign(adj_info, minibatch.test_adj)
+    train_adj_info = tf.compat.v1.assign(adj_info, minibatch.adj)
+    val_adj_info = tf.compat.v1.assign(adj_info, minibatch.test_adj)
     for epoch in range(FLAGS.epochs): 
         minibatch.shuffle() 
 
@@ -336,4 +336,4 @@ def main(argv=None):
     train(train_data)
 
 if __name__ == '__main__':
-    tf.app.run()
+    tf.compat.v1.app.run()

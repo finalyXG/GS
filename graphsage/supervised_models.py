@@ -4,7 +4,7 @@ import graphsage.models as models
 import graphsage.layers as layers
 from graphsage.aggregators import MeanAggregator, MaxPoolingAggregator, MeanPoolingAggregator, SeqAggregator, GCNAggregator
 
-flags = tf.app.flags
+flags = tf.compat.v1.flags
 FLAGS = flags.FLAGS
 
 class SupervisedGraphsage(models.SampleAndAggregate):
@@ -49,7 +49,7 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         self.model_size = model_size
         self.adj_info = adj
         if identity_dim > 0:
-           self.embeds = tf.get_variable("node_embeddings", [adj.get_shape().as_list()[0], identity_dim])
+           self.embeds = tf.compat.v1.get_variable("node_embeddings", [adj.get_shape().as_list()[0], identity_dim])
         else:
            self.embeds = None
         if features is None: 
@@ -70,7 +70,7 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         self.placeholders = placeholders
         self.layer_infos = layer_infos
 
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
+        self.optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
 
         self.build()
 
@@ -109,15 +109,15 @@ class SupervisedGraphsage(models.SampleAndAggregate):
        
         # classification loss
         if self.sigmoid_loss:
-            self.loss += tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+            self.loss += tf.reduce_mean(input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(
                     logits=self.node_preds,
                     labels=self.placeholders['labels']))
         else:
-            self.loss += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+            self.loss += tf.reduce_mean(input_tensor=tf.nn.softmax_cross_entropy_with_logits(
                     logits=self.node_preds,
-                    labels=self.placeholders['labels']))
+                    labels=tf.stop_gradient(self.placeholders['labels'])))
 
-        tf.summary.scalar('loss', self.loss)
+        tf.compat.v1.summary.scalar('loss', self.loss)
 
     def predict(self):
         if self.sigmoid_loss:

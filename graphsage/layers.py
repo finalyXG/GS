@@ -5,7 +5,8 @@ import tensorflow as tf
 
 from graphsage.inits import zeros
 
-flags = tf.app.flags
+
+flags = tf.compat.v1.flags
 FLAGS = flags.FLAGS
 
 # DISCLAIMER:
@@ -57,17 +58,17 @@ class Layer(object):
         return inputs
 
     def __call__(self, inputs):
-        with tf.name_scope(self.name):
+        with tf.compat.v1.name_scope(self.name):
             if self.logging and not self.sparse_inputs:
-                tf.summary.histogram(self.name + '/inputs', inputs)
+                tf.compat.v1.summary.histogram(self.name + '/inputs', inputs)
             outputs = self._call(inputs)
             if self.logging:
-                tf.summary.histogram(self.name + '/outputs', outputs)
+                tf.compat.v1.summary.histogram(self.name + '/outputs', outputs)
             return outputs
 
     def _log_vars(self):
         for var in self.vars:
-            tf.summary.histogram(self.name + '/vars/' + var, self.vars[var])
+            tf.compat.v1.summary.histogram(self.name + '/vars/' + var, self.vars[var])
 
 
 class Dense(Layer):
@@ -90,11 +91,11 @@ class Dense(Layer):
         if sparse_inputs:
             self.num_features_nonzero = placeholders['num_features_nonzero']
 
-        with tf.variable_scope(self.name + '_vars'):
-            self.vars['weights'] = tf.get_variable('weights', shape=(input_dim, output_dim),
+        with tf.compat.v1.variable_scope(self.name + '_vars'):
+            self.vars['weights'] = tf.compat.v1.get_variable('weights', shape=(input_dim, output_dim),
                                          dtype=tf.float32, 
-                                         initializer=tf.contrib.layers.xavier_initializer(),
-                                         regularizer=tf.contrib.layers.l2_regularizer(FLAGS.weight_decay))
+                                         initializer=tf.compat.v1.keras.initializers.VarianceScaling(scale=1.0, mode="fan_avg", distribution="uniform"),
+                                         regularizer=tf.keras.regularizers.l2(0.5 * (FLAGS.weight_decay)))
             if self.bias:
                 self.vars['bias'] = zeros([output_dim], name='bias')
 
@@ -104,7 +105,7 @@ class Dense(Layer):
     def _call(self, inputs):
         x = inputs
 
-        x = tf.nn.dropout(x, 1-self.dropout)
+        x = tf.nn.dropout(x, rate=1 - (1-self.dropout))
 
         # transform
         output = tf.matmul(x, self.vars['weights'])
