@@ -119,13 +119,13 @@ def save_val_embeddings(sess, model, minibatch_iter, size, out_dir, mod=""):
 def construct_placeholders():
     # Define placeholders
     placeholders = {
-        'batch1' : tf.compat.v1.placeholder(tf.int32, shape=(None), name='batch1'),
-        'batch2' : tf.compat.v1.placeholder(tf.int32, shape=(None), name='batch2'),
+        'batch1' : tf.placeholder(tf.int32, shape=(None), name='batch1'),
+        'batch2' : tf.placeholder(tf.int32, shape=(None), name='batch2'),
         # negative samples for all nodes in the batch
-        'neg_samples': tf.compat.v1.placeholder(tf.int32, shape=(None,),
+        'neg_samples': tf.placeholder(tf.int32, shape=(None,),
             name='neg_sample_size'),
-        'dropout': tf.compat.v1.placeholder_with_default(0., shape=(), name='dropout'),
-        'batch_size' : tf.compat.v1.placeholder(tf.int32, name='batch_size'),
+        'dropout': tf.placeholder_with_default(0., shape=(), name='dropout'),
+        'batch_size' : tf.placeholder(tf.int32, name='batch_size'),
     }
     return placeholders
 
@@ -146,7 +146,7 @@ def train(train_data, test_data=None):
             max_degree=FLAGS.max_degree, 
             num_neg_samples=FLAGS.neg_sample_size,
             context_pairs = context_pairs)
-    adj_info_ph = tf.compat.v1.placeholder(tf.int32, shape=minibatch.adj.shape)
+    adj_info_ph = tf.placeholder(tf.int32, shape=minibatch.adj.shape)
     adj_info = tf.Variable(adj_info_ph, trainable=False, name="adj_info")
 
     if FLAGS.model == 'graphsage_mean':
@@ -233,18 +233,18 @@ def train(train_data, test_data=None):
     else:
         raise Exception('Error: model name unrecognized.')
 
-    config = tf.compat.v1.ConfigProto(log_device_placement=FLAGS.log_device_placement)
+    config = tf.ConfigProto(log_device_placement=FLAGS.log_device_placement)
     config.gpu_options.allow_growth = True
     #config.gpu_options.per_process_gpu_memory_fraction = GPU_MEM_FRACTION
     config.allow_soft_placement = True
     
     # Initialize session
-    sess = tf.compat.v1.Session(config=config)
-    merged = tf.compat.v1.summary.merge_all()
-    summary_writer = tf.compat.v1.summary.FileWriter(log_dir(), sess.graph)
+    sess = tf.Session(config=config)
+    merged = tf.summary.merge_all()
+    summary_writer = tf.summary.FileWriter(log_dir(), sess.graph)
      
     # Init variables
-    sess.run(tf.compat.v1.global_variables_initializer(), feed_dict={adj_info_ph: minibatch.adj})
+    sess.run(tf.global_variables_initializer(), feed_dict={adj_info_ph: minibatch.adj})
     
     # Train model
     
@@ -255,8 +255,8 @@ def train(train_data, test_data=None):
     avg_time = 0.0
     epoch_val_costs = []
 
-    train_adj_info = tf.compat.v1.assign(adj_info, minibatch.adj)
-    val_adj_info = tf.compat.v1.assign(adj_info, minibatch.test_adj)
+    train_adj_info = tf.assign(adj_info, minibatch.adj)
+    val_adj_info = tf.assign(adj_info, minibatch.test_adj)
     for epoch in range(FLAGS.epochs): 
         minibatch.shuffle() 
 
@@ -323,20 +323,20 @@ def train(train_data, test_data=None):
 
         if FLAGS.model == "n2v":
             # stopping the gradient for the already trained nodes
-            train_ids = tf.constant([[id_map[n]] for n in G.nodes_iter() if not G.node[n]['val'] and not G.node[n]['test']],
+            train_ids = tf.constant([[id_map[n]] for n in G.nodes_iter() if not G.nodes[n]['val'] and not G.nodes[n]['test']],
                     dtype=tf.int32)
-            test_ids = tf.constant([[id_map[n]] for n in G.nodes_iter() if G.node[n]['val'] or G.node[n]['test']], 
+            test_ids = tf.constant([[id_map[n]] for n in G.nodes_iter() if G.nodes[n]['val'] or G.nodes[n]['test']], 
                     dtype=tf.int32)
-            update_nodes = tf.nn.embedding_lookup(params=model.context_embeds, ids=tf.squeeze(test_ids))
-            no_update_nodes = tf.nn.embedding_lookup(params=model.context_embeds,ids=tf.squeeze(train_ids))
-            update_nodes = tf.scatter_nd(test_ids, update_nodes, tf.shape(input=model.context_embeds))
-            no_update_nodes = tf.stop_gradient(tf.scatter_nd(train_ids, no_update_nodes, tf.shape(input=model.context_embeds)))
+            update_nodes = tf.nn.embedding_lookup(model.context_embeds, tf.squeeze(test_ids))
+            no_update_nodes = tf.nn.embedding_lookup(model.context_embeds,tf.squeeze(train_ids))
+            update_nodes = tf.scatter_nd(test_ids, update_nodes, tf.shape(model.context_embeds))
+            no_update_nodes = tf.stop_gradient(tf.scatter_nd(train_ids, no_update_nodes, tf.shape(model.context_embeds)))
             model.context_embeds = update_nodes + no_update_nodes
             sess.run(model.context_embeds)
 
             # run random walks
             from graphsage.utils import run_random_walks
-            nodes = [n for n in G.nodes_iter() if G.node[n]["val"] or G.node[n]["test"]]
+            nodes = [n for n in G.nodes_iter() if G.nodes[n]["val"] or G.nodes[n]["test"]]
             start_time = time.time()
             pairs = run_random_walks(G, nodes, num_walks=50)
             walk_time = time.time() - start_time
@@ -380,4 +380,4 @@ def main(argv=None):
     train(train_data)
 
 if __name__ == '__main__':
-    tf.compat.v1.app.run()
+    tf.app.run()
