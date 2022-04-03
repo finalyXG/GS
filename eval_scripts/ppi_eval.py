@@ -44,8 +44,8 @@ if __name__ == '__main__':
     labels = json.load(open(dataset_dir + "/ppi-class_map.json"))
     labels = {int(i):l for i, l in labels.iteritems()}
     
-    train_ids = [n for n in G.nodes() if not G.node[n]['val'] and not G.node[n]['test']]
-    test_ids = [n for n in G.nodes() if G.node[n][setting]]
+    train_ids = [n for n in list(G.nodes()) if not G.nodes[n]['val'] and not G.nodes[n]['test']]
+    test_ids = [n for n in list(G.nodes()) if G.nodes[n][setting]]
     train_labels = np.array([labels[i] for i in train_ids])
     if train_labels.ndim == 1:
         train_labels = np.expand_dims(train_labels, 1)

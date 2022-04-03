@@ -41,8 +41,8 @@ if __name__ == '__main__':
     print("Loading data...")
     G = json_graph.node_link_graph(json.load(open(dataset_dir + "/isi-G.json")))
      
-    train_ids = [n for n in G.nodes() if not G.node[n]['val'] and not G.node[n]['test']]
-    test_ids = [n for n in G.nodes() if G.node[n][setting]]
+    train_ids = [n for n in list(G.nodes()) if not G.nodes[n]['val'] and not G.nodes[n]['test']]
+    test_ids = [n for n in list(G.nodes()) if G.nodes[n][setting]]
     test_labels = get_class_labels(test_ids)
     train_labels = get_class_labels(train_ids)
 

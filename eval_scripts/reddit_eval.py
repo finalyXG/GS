@@ -35,8 +35,8 @@ if __name__ == '__main__':
     G = json_graph.node_link_graph(json.load(open(dataset_dir + "/reddit-G.json")))
     labels = json.load(open(dataset_dir + "/reddit-class_map.json"))
     
-    train_ids = [n for n in G.nodes() if not G.node[n]['val'] and not G.node[n]['test']]
-    test_ids = [n for n in G.nodes() if G.node[n][setting]]
+    train_ids = [n for n in list(G.nodes()) if not G.nodes[n]['val'] and not G.nodes[n]['test']]
+    test_ids = [n for n in list(G.nodes()) if G.nodes[n][setting]]
     train_labels = [labels[i] for i in train_ids]
     test_labels = [labels[i] for i in test_ids]
 
