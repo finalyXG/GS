@@ -112,3 +112,4 @@ env_L.yaml
 sup-example_data/graphsage_mean_small_0.0100/events.out.tfevents.1648745442.LAPTOP-UOCNEV2U
 sup-example_data/graphsage_mean_*
 gitmsg.json
+.vscode/*.json

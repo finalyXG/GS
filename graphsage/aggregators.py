@@ -26,13 +26,13 @@ class MeanAggregator(Layer):
         else:
             name = ''
 
-        with tf.compat.v1.variable_scope(self.name + name + '_vars'):
-            self.vars['neigh_weights'] = glorot([neigh_input_dim, output_dim],
-                                                        name='neigh_weights')
-            self.vars['self_weights'] = glorot([input_dim, output_dim],
-                                                        name='self_weights')
-            if self.bias:
-                self.vars['bias'] = zeros([self.output_dim], name='bias')
+        init = tf.initializers.GlorotUniform()
+        self.vars_neigh_weights = tf.Variable(init(shape=[neigh_input_dim, output_dim]),
+                                                trainable=True, name='neigh_weights')
+        self.vars_self_weights = tf.Variable(init(shape=[input_dim, output_dim]),
+                                                trainable=True, name='self_weights')
+        if self.bias:
+            self.vars_bias = tf.Variable(tf.initializers.zeros()(shape=[self.output_dim]), name='bias')
 
         if self.logging:
             self._log_vars()
@@ -48,9 +48,9 @@ class MeanAggregator(Layer):
         neigh_means = tf.reduce_mean(input_tensor=neigh_vecs, axis=1)
        
         # [nodes] x [out_dim]
-        from_neighs = tf.matmul(neigh_means, self.vars['neigh_weights'])
+        from_neighs = tf.matmul(neigh_means, self.vars_neigh_weights)
 
-        from_self = tf.matmul(self_vecs, self.vars["self_weights"])
+        from_self = tf.matmul(self_vecs, self.vars_self_weights)
          
         if not self.concat:
             output = tf.add_n([from_self, from_neighs])
@@ -59,7 +59,7 @@ class MeanAggregator(Layer):
 
         # bias
         if self.bias:
-            output += self.vars['bias']
+            output += self.vars_bias
        
         return self.act(output)
 
