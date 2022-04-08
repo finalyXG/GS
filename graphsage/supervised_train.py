@@ -4,7 +4,6 @@ from __future__ import print_function
 import os
 import time
 import tensorflow as tf
-tf.compat.v1.disable_eager_execution()
 
 
 import numpy as np
@@ -68,18 +67,16 @@ def calc_f1(y_true, y_pred):
         y_true = np.argmax(y_true, axis=1)
         y_pred = np.argmax(y_pred, axis=1)
     else:
-        y_pred[y_pred > 0.5] = 1
-        y_pred[y_pred <= 0.5] = 0
+        y_pred = tf.where(y_pred > 0.5, 1, 0).numpy()
     return metrics.f1_score(y_true, y_pred, average="micro"), metrics.f1_score(y_true, y_pred, average="macro")
 
 # Define model evaluation function
-def evaluate(sess, model, minibatch_iter, size=None):
+def evaluate(model, minibatch_iter, size=None):
     t_test = time.time()
     feed_dict_val, labels = minibatch_iter.node_val_feed_dict(size)
-    node_outs_val = sess.run([model.preds, model.loss], 
-                        feed_dict=feed_dict_val)
+    node_outs_val = model.test_one_step(feed_dict_val)
     mic, mac = calc_f1(labels, node_outs_val[0])
-    return node_outs_val[1], mic, mac, (time.time() - t_test)
+    return node_outs_val[1].numpy(), mic, mac, (time.time() - t_test)
 
 def log_dir():
     log_dir = FLAGS.base_log_dir + "/sup-" + FLAGS.train_prefix.split("/")[-2]
@@ -91,7 +88,7 @@ def log_dir():
         os.makedirs(log_dir)
     return log_dir
 
-def incremental_evaluate(sess, model, minibatch_iter, size, test=False):
+def incremental_evaluate(model, minibatch_iter, size, test=False):
     t_test = time.time()
     finished = False
     val_losses = []
@@ -101,8 +98,7 @@ def incremental_evaluate(sess, model, minibatch_iter, size, test=False):
     finished = False
     while not finished:
         feed_dict_val, batch_labels, finished, _  = minibatch_iter.incremental_node_val_feed_dict(size, iter_num, test=test)
-        node_outs_val = sess.run([model.preds, model.loss], 
-                         feed_dict=feed_dict_val)
+        node_outs_val = model.test_one_step(feed_dict_val)
         val_preds.append(node_outs_val[0])
         labels.append(batch_labels)
         val_losses.append(node_outs_val[1])
@@ -115,10 +111,14 @@ def incremental_evaluate(sess, model, minibatch_iter, size, test=False):
 def construct_placeholders(num_classes):
     # Define placeholders
     placeholders = {
-        'labels' : tf.compat.v1.placeholder(tf.float32, shape=(None, num_classes), name='labels'),
-        'batch' : tf.compat.v1.placeholder(tf.int32, shape=(None), name='batch1'),
-        'dropout': tf.compat.v1.placeholder_with_default(0., shape=(), name='dropout'),
-        'batch_size' : tf.compat.v1.placeholder(tf.int32, name='batch_size'),
+        # 'labels' : tf.compat.v1.placeholder(tf.float32, shape=(None, num_classes), name='labels'),
+        # 'batch' : tf.compat.v1.placeholder(tf.int32, shape=(None), name='batch1'),
+        # 'dropout': tf.compat.v1.placeholder_with_default(0., shape=(), name='dropout'),
+        # 'batch_size' : tf.compat.v1.placeholder(tf.int32, name='batch_size'),
+        # 'labels' : tf.ones(shape=(1, num_classes), dtype=tf.float32, name='labels'),
+        # 'batch' : tf.compat.v1.placeholder(tf.int32, shape=(None), name='batch1'),
+        # 'dropout': tf.compat.v1.placeholder_with_default(0., shape=(), name='dropout'),
+        # 'batch_size' : tf.compat.v1.placeholder(tf.int32, name='batch_size'),
     }
     return placeholders
 
@@ -138,7 +138,12 @@ def train(train_data, test_data=None):
         features = np.vstack([features, np.zeros((features.shape[1],))])
 
     context_pairs = train_data[3] if FLAGS.random_context else None
-    placeholders = construct_placeholders(num_classes)
+    placeholders = {
+        'labels' : tf.cast(tf.compat.v1.distributions.Bernoulli(probs=0.7).sample(sample_shape=(1, 121)), tf.float32),
+        'batch' : tf.constant(list(G.nodes)[:1], dtype=tf.int32, name='batch1'),
+        'dropout': tf.constant(0., dtype=tf.float32, name='batch1'),
+        'batch_size' : tf.constant(512, dtype=tf.float32, name='batch1'),
+    }
     minibatch = NodeMinibatchIterator(G, 
             id_map,
             placeholders, 
@@ -147,8 +152,9 @@ def train(train_data, test_data=None):
             batch_size=FLAGS.batch_size,
             max_degree=FLAGS.max_degree, 
             context_pairs = context_pairs)
-    adj_info_ph = tf.compat.v1.placeholder(tf.int32, shape=minibatch.adj.shape)
-    adj_info = tf.Variable(adj_info_ph, trainable=False, name="adj_info")
+    adj_info_ph = tf.constant(minibatch.adj.shape)
+
+    adj_info = tf.constant(minibatch.adj, name="adj_info")
 
     if FLAGS.model == 'graphsage_mean':
         # Create model
@@ -247,12 +253,11 @@ def train(train_data, test_data=None):
     config.allow_soft_placement = True
     
     # Initialize session
-    sess = tf.compat.v1.Session(config=config)
-    merged = tf.compat.v1.summary.merge_all()
-    summary_writer = tf.compat.v1.summary.FileWriter(log_dir(), sess.graph)
+    
+  
+    summary_writer = tf.summary.create_file_writer(log_dir())
      
     # Init variables
-    sess.run(tf.compat.v1.global_variables_initializer(), feed_dict={adj_info_ph: minibatch.adj})
     
     # Train model
     
@@ -260,8 +265,8 @@ def train(train_data, test_data=None):
     avg_time = 0.0
     epoch_val_costs = []
 
-    train_adj_info = tf.compat.v1.assign(adj_info, minibatch.adj)
-    val_adj_info = tf.compat.v1.assign(adj_info, minibatch.test_adj)
+    # train_adj_info = tf.compat.v1.assign(adj_info, minibatch.adj)
+    # val_adj_info = tf.compat.v1.assign(adj_info, minibatch.test_adj)
     for epoch in range(FLAGS.epochs): 
         minibatch.shuffle() 
 
@@ -271,31 +276,33 @@ def train(train_data, test_data=None):
         while not minibatch.end():
             # Construct feed dictionary
             feed_dict, labels = minibatch.next_minibatch_feed_dict()
-            feed_dict.update({placeholders['dropout']: FLAGS.dropout})
+            feed_dict.update({'dropout': FLAGS.dropout})
 
             t = time.time()
             # Training step
-            outs = sess.run([merged, model.opt_op, model.loss, model.preds], feed_dict=feed_dict)
-            train_cost = outs[2]
+            outs = model.train_one_step(feed_dict)
+            train_cost = outs[1]
 
             if iter % FLAGS.validate_iter == 0:
                 # Validation
-                sess.run(val_adj_info.op)
+
                 if FLAGS.validate_batch_size == -1:
                     val_cost, val_f1_mic, val_f1_mac, duration = incremental_evaluate(sess, model, minibatch, FLAGS.batch_size)
                 else:
-                    val_cost, val_f1_mic, val_f1_mac, duration = evaluate(sess, model, minibatch, FLAGS.validate_batch_size)
-                sess.run(train_adj_info.op)
+                    val_cost, val_f1_mic, val_f1_mac, duration = evaluate(model, minibatch, FLAGS.validate_batch_size)
+
                 epoch_val_costs[-1] += val_cost
 
             if total_steps % FLAGS.print_every == 0:
-                summary_writer.add_summary(outs[0], total_steps)
+                with summary_writer.as_default(step=total_steps):
+                    tf.summary.histogram(name='distribution', data=outs[0])
+
     
             # Print results
             avg_time = (avg_time * total_steps + time.time() - t) / (total_steps + 1)
 
             if total_steps % FLAGS.print_every == 0:
-                train_f1_mic, train_f1_mac = calc_f1(labels, outs[-1])
+                train_f1_mic, train_f1_mac = calc_f1(labels, outs[0])
                 print("Iter:", '%04d' % iter, 
                       "train_loss=", "{:.5f}".format(train_cost),
                       "train_f1_mic=", "{:.5f}".format(train_f1_mic), 
@@ -315,8 +322,8 @@ def train(train_data, test_data=None):
                 break
     
     print("Optimization Finished!")
-    sess.run(val_adj_info.op)
-    val_cost, val_f1_mic, val_f1_mac, duration = incremental_evaluate(sess, model, minibatch, FLAGS.batch_size)
+
+    val_cost, val_f1_mic, val_f1_mac, duration = incremental_evaluate(model, minibatch, FLAGS.batch_size)
     print("Full validation stats:",
                   "loss=", "{:.5f}".format(val_cost),
                   "f1_micro=", "{:.5f}".format(val_f1_mic),
@@ -327,7 +334,7 @@ def train(train_data, test_data=None):
                 format(val_cost, val_f1_mic, val_f1_mac, duration))
 
     print("Writing test set stats to file (don't peak!)")
-    val_cost, val_f1_mic, val_f1_mac, duration = incremental_evaluate(sess, model, minibatch, FLAGS.batch_size, test=True)
+    val_cost, val_f1_mic, val_f1_mac, duration = incremental_evaluate(model, minibatch, FLAGS.batch_size, test=True)
     with open(log_dir() + "test_stats.txt", "w") as fp:
         fp.write("loss={:.5f} f1_micro={:.5f} f1_macro={:.5f}".
                 format(val_cost, val_f1_mic, val_f1_mac))
