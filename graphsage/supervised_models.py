@@ -81,7 +81,7 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         num_samples = [layer_info.num_samples for layer_info in self.layer_infos]
         
         self.outputs1, self.aggregators = self.aggregate(samples1, [self.features], self.dims, num_samples,
-                support_sizes1, batch_build, concat=self.concat, model_size=self.model_size)
+                support_sizes1, batch_build, name='agg', concat=self.concat, model_size=self.model_size)
         dim_mult = 2 if self.concat else 1
 
         self.outputs1 = tf.nn.l2_normalize(self.outputs1, 1)
@@ -156,11 +156,11 @@ class SupervisedGraphsage(models.SampleAndAggregate):
                     support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size)
 
             dim_mult = 2 if self.concat else 1
-            node_pred = layers.Dense(dim_mult*self.dims[-1], self.num_classes, 
-                    dropout=self.placeholders['dropout'],
-                    act=lambda x : x)
+            # node_pred = layers.Dense(dim_mult*self.dims[-1], self.num_classes,
+            #         dropout=self.placeholders['dropout'],
+            #         act=lambda x : x)
             # TF graph management
-            node_preds = node_pred(outputs1)
+            node_preds = self.node_pred(outputs1)
             preds = self.predict_input(node_preds)
             loss = self._loss(node_preds, feed_dict['labels'], is_return=True)
 
@@ -177,11 +177,11 @@ class SupervisedGraphsage(models.SampleAndAggregate):
                 support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size)
 
         dim_mult = 2 if self.concat else 1
-        node_pred = layers.Dense(dim_mult*self.dims[-1], self.num_classes, 
-                dropout=self.placeholders['dropout'],
-                act=lambda x : x)
+        # node_pred = layers.Dense(dim_mult*self.dims[-1], self.num_classes, 
+        #         dropout=self.placeholders['dropout'],
+        #         act=lambda x : x)
         # TF graph management
-        node_preds = node_pred(outputs1)
+        node_preds = self.node_pred(outputs1)
         preds = self.predict_input(node_preds)
         loss = self._loss(node_preds, feed_dict['labels'], is_return=True)
 

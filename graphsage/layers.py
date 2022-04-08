@@ -92,13 +92,18 @@ class Dense(Layer):
         if sparse_inputs:
             self.num_features_nonzero = placeholders['num_features_nonzero']
 
-        with tf.compat.v1.variable_scope(self.name + '_vars'):
-            self.vars['weights'] = tf.compat.v1.get_variable('weights', shape=(input_dim, output_dim),
-                                         dtype=tf.float32, 
-                                         initializer=tf.compat.v1.keras.initializers.VarianceScaling(scale=1.0, mode="fan_avg", distribution="uniform"),
-                                         regularizer=tf.keras.regularizers.l2(0.5 * (FLAGS.weight_decay)))
-            if self.bias:
-                self.vars['bias'] = zeros([output_dim], name='bias')
+        init=tf.keras.initializers.VarianceScaling(scale=1.0, mode="fan_avg", distribution="uniform")
+        self.vars_weights = self.add_weight(
+            shape=[input_dim, output_dim],
+            initializer=init,
+            regularizer=tf.keras.regularizers.l2(0.5 * (FLAGS.weight_decay)),
+            trainable=True, 
+            name=f'{self.name}_weights')
+        if self.bias:
+            self.vars_bias = self.add_weight(
+                shape=[self.output_dim],
+                initializer=tf.initializers.zeros(), 
+                name=f'{self.name}_bias')
 
         if self.logging:
             self._log_vars()
@@ -109,10 +114,10 @@ class Dense(Layer):
         x = tf.nn.dropout(x, rate=1 - (1-self.dropout))
 
         # transform
-        output = tf.matmul(x, self.vars['weights'])
+        output = tf.matmul(x, self.vars_weights)
 
         # bias
         if self.bias:
-            output += self.vars['bias']
+            output += self.vars_bias
 
         return self.act(output)

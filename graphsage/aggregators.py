@@ -28,11 +28,11 @@ class MeanAggregator(Layer):
 
         init = tf.initializers.GlorotUniform()
         self.vars_neigh_weights = tf.Variable(init(shape=[neigh_input_dim, output_dim]),
-                                                trainable=True, name='neigh_weights')
+                                                trainable=True, name=f'{name}/neigh_weights')
         self.vars_self_weights = tf.Variable(init(shape=[input_dim, output_dim]),
-                                                trainable=True, name='self_weights')
+                                                trainable=True, name=f'{name}/self_weights')
         if self.bias:
-            self.vars_bias = tf.Variable(tf.initializers.zeros()(shape=[self.output_dim]), name='bias')
+            self.vars_bias = tf.Variable(tf.initializers.zeros()(shape=[self.output_dim]), name=f'{name}/bias')
 
         if self.logging:
             self._log_vars()

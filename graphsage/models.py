@@ -312,11 +312,11 @@ class SampleAndAggregate(GeneralizedModel):
                     # Laurence 20220407: act -> activation function
                     aggregator = self.aggregator_cls(dim_mult*dims[layer], dims[layer+1], act=lambda x : x,
                             dropout=self.placeholders['dropout'], 
-                            name=name, concat=concat, model_size=model_size)
+                            name=f'{name}_{layer}', concat=concat, model_size=model_size)
                 else:
                     aggregator = self.aggregator_cls(dim_mult*dims[layer], dims[layer+1],
                             dropout=self.placeholders['dropout'], 
-                            name=name, concat=concat, model_size=model_size)
+                            name=f'{name}_{layer}', concat=concat, model_size=model_size)
                 aggregators.append(aggregator)
             else:
                 aggregator = aggregators[layer]
