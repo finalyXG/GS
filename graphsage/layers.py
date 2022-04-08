@@ -26,7 +26,7 @@ def get_layer_uid(layer_name=''):
         _LAYER_UIDS[layer_name] += 1
         return _LAYER_UIDS[layer_name]
 
-class Layer(object):
+class Layer(tf.keras.layers.Layer): # object
     """Base layer class. Defines basic API for all layer objects.
     Implementation inspired by keras (http://keras.io).
     # Properties
@@ -41,6 +41,7 @@ class Layer(object):
     """
 
     def __init__(self, **kwargs):
+        super(Layer, self).__init__()
         allowed_kwargs = {'name', 'logging', 'model_size'}
         for kwarg in kwargs.keys():
             assert kwarg in allowed_kwargs, 'Invalid keyword argument: ' + kwarg
@@ -48,7 +49,7 @@ class Layer(object):
         if not name:
             layer = self.__class__.__name__.lower()
             name = layer + '_' + str(get_layer_uid(layer))
-        self.name = name
+        self._name = name
         self.vars = {}
         logging = kwargs.get('logging', False)
         self.logging = logging
