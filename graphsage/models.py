@@ -17,15 +17,17 @@ FLAGS = flags.FLAGS
 # https://github.com/tkipf/gcn
 # which itself was very inspired by the keras package
 
-class Model(object):
+class Model(tf.keras.Model):
     def __init__(self, **kwargs):
+        super(Model, self).__init__()
+
         allowed_kwargs = {'name', 'logging', 'model_size'}
         for kwarg in kwargs.keys():
             assert kwarg in allowed_kwargs, 'Invalid keyword argument: ' + kwarg
         name = kwargs.get('name')
         if not name:
             name = self.__class__.__name__.lower()
-        self.name = name
+        self._name = name
 
         logging = kwargs.get('logging', False)
         self.logging = logging
@@ -33,7 +35,7 @@ class Model(object):
         self.vars = {}
         self.placeholders = {}
 
-        self.layers = []
+        # self.layers = []
         self.activations = []
 
         self.inputs = None
@@ -266,10 +268,12 @@ class SampleAndAggregate(GeneralizedModel):
         support_size = 1
         support_sizes = [support_size]
         for k in range(len(layer_infos)):
-            t = len(layer_infos) - k - 1
+            # t = len(layer_infos) - k - 1
+            t = k
             support_size *= layer_infos[t].num_samples
             sampler = layer_infos[t].neigh_sampler
             node = sampler((samples[k], layer_infos[t].num_samples))
+            node = tf.cast(node, tf.int32)
             samples.append(tf.reshape(node, [support_size * batch_size,]))
             support_sizes.append(support_size)
         return samples, support_sizes
@@ -305,6 +309,7 @@ class SampleAndAggregate(GeneralizedModel):
                 dim_mult = 2 if concat and (layer != 0) else 1
                 # aggregator at current layer
                 if layer == len(num_samples) - 1:
+                    # Laurence 20220407: act -> activation function
                     aggregator = self.aggregator_cls(dim_mult*dims[layer], dims[layer+1], act=lambda x : x,
                             dropout=self.placeholders['dropout'], 
                             name=name, concat=concat, model_size=model_size)
@@ -321,7 +326,8 @@ class SampleAndAggregate(GeneralizedModel):
             for hop in range(len(num_samples) - layer):
                 dim_mult = 2 if concat and (layer != 0) else 1
                 neigh_dims = [batch_size * support_sizes[hop], 
-                              num_samples[len(num_samples) - hop - 1], 
+                            #   num_samples[len(num_samples) - hop - 1], 
+                              num_samples[hop],
                               dim_mult*dims[layer]]
                 h = aggregator((hidden[hop],
                                 tf.reshape(hidden[hop + 1], neigh_dims)))
