@@ -2,6 +2,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
+import tensorflow as tf
 
 np.random.seed(123)
 
@@ -267,9 +268,9 @@ class NodeMinibatchIterator(object):
               
         labels = np.vstack([self._make_label_vec(node) for node in batch1id])
         feed_dict = dict()
-        feed_dict.update({self.placeholders['batch_size'] : len(batch1)})
-        feed_dict.update({self.placeholders['batch']: batch1})
-        feed_dict.update({self.placeholders['labels']: labels})
+        feed_dict.update({'batch_size' : tf.constant(len(batch1)) })
+        feed_dict.update({'batch': tf.constant(batch1)})
+        feed_dict.update({'labels': tf.constant(labels, dtype=tf.float32)})
 
         return feed_dict, labels
 
