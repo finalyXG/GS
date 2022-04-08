@@ -72,14 +72,16 @@ class SupervisedGraphsage(models.SampleAndAggregate):
 
         self.optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
 
-        self.build()
+        self.build_by_run_once()
 
 
-    def build(self):
-        samples1, support_sizes1 = self.sample(self.inputs1, self.layer_infos)
+    def build_by_run_once(self):
+        batch_build = 1
+        samples1, support_sizes1 = self.sample(self.inputs1, self.layer_infos, batch_build)
         num_samples = [layer_info.num_samples for layer_info in self.layer_infos]
+        
         self.outputs1, self.aggregators = self.aggregate(samples1, [self.features], self.dims, num_samples,
-                support_sizes1, concat=self.concat, model_size=self.model_size)
+                support_sizes1, batch_build, concat=self.concat, model_size=self.model_size)
         dim_mult = 2 if self.concat else 1
 
         self.outputs1 = tf.nn.l2_normalize(self.outputs1, 1)
@@ -92,35 +94,101 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         self.node_preds = self.node_pred(self.outputs1)
 
         self._loss()
-        grads_and_vars = self.optimizer.compute_gradients(self.loss)
-        clipped_grads_and_vars = [(tf.clip_by_value(grad, -5.0, 5.0) if grad is not None else None, var) 
-                for grad, var in grads_and_vars]
-        self.grad, _ = clipped_grads_and_vars[0]
-        self.opt_op = self.optimizer.apply_gradients(clipped_grads_and_vars)
+        # Laurence 20220406: In tf2.0, seems no need to take care of grads_and_vars in build step.
+        # grads_and_vars = self.optimizer.compute_gradients(self.loss)
+        # clipped_grads_and_vars = [(tf.clip_by_value(grad, -5.0, 5.0) if grad is not None else None, var) 
+        #         for grad, var in grads_and_vars]
+        # self.grad, _ = clipped_grads_and_vars[0]
+        # self.opt_op = self.optimizer.apply_gradients(clipped_grads_and_vars)
         self.preds = self.predict()
 
-    def _loss(self):
+    def _loss(self, node_preds=None, labels=None, is_return=False):
         # Weight decay loss
+        self.loss = 0
         for aggregator in self.aggregators:
             for var in aggregator.vars.values():
                 self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
         for var in self.node_pred.vars.values():
             self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
        
+        if node_preds is None:
+            node_preds = self.node_preds
+
+        if labels is None:
+            labels = self.placeholders['labels']
+        
         # classification loss
         if self.sigmoid_loss:
             self.loss += tf.reduce_mean(input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(
-                    logits=self.node_preds,
-                    labels=self.placeholders['labels']))
+                    logits=node_preds,
+                    labels=labels))
         else:
             self.loss += tf.reduce_mean(input_tensor=tf.nn.softmax_cross_entropy_with_logits(
-                    logits=self.node_preds,
-                    labels=tf.stop_gradient(self.placeholders['labels'])))
+                    logits=node_preds,
+                    labels=tf.stop_gradient(labels)))
 
         tf.compat.v1.summary.scalar('loss', self.loss)
+        if is_return:
+            return self.loss
 
     def predict(self):
         if self.sigmoid_loss:
             return tf.nn.sigmoid(self.node_preds)
         else:
             return tf.nn.softmax(self.node_preds)
+
+    def predict_input(self, input):
+        if self.sigmoid_loss:
+            return tf.nn.sigmoid(input)
+        else:
+            return tf.nn.softmax(input)
+        
+
+
+    #Laurence 20220406
+    def train_one_step(self, feed_dict):
+
+        with tf.GradientTape() as tape:
+            samples1, support_sizes1 = self.sample(feed_dict['batch'], self.layer_infos, feed_dict['batch_size'])
+            num_samples = [layer_info.num_samples for layer_info in self.layer_infos]
+
+            outputs1, _ = self.aggregate(samples1, [self.features], self.dims, num_samples,
+                    support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size)
+
+            dim_mult = 2 if self.concat else 1
+            node_pred = layers.Dense(dim_mult*self.dims[-1], self.num_classes, 
+                    dropout=self.placeholders['dropout'],
+                    act=lambda x : x)
+            # TF graph management
+            node_preds = node_pred(outputs1)
+            preds = self.predict_input(node_preds)
+            loss = self._loss(node_preds, feed_dict['labels'], is_return=True)
+
+        gradients = [tf.clip_by_value(g, -5.0, 5.0) for g in tape.gradient(loss, self.trainable_variables)]
+        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+        return preds, loss
+
+    #Laurence 20220407
+    def test_one_step(self, feed_dict):
+        samples1, support_sizes1 = self.sample(feed_dict['batch'], self.layer_infos, feed_dict['batch_size'])
+        num_samples = [layer_info.num_samples for layer_info in self.layer_infos]
+
+        outputs1, _ = self.aggregate(samples1, [self.features], self.dims, num_samples,
+                support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size)
+
+        dim_mult = 2 if self.concat else 1
+        node_pred = layers.Dense(dim_mult*self.dims[-1], self.num_classes, 
+                dropout=self.placeholders['dropout'],
+                act=lambda x : x)
+        # TF graph management
+        node_preds = node_pred(outputs1)
+        preds = self.predict_input(node_preds)
+        loss = self._loss(node_preds, feed_dict['labels'], is_return=True)
+
+       
+        return preds, loss
+
+
+    #Laurence 20220406
+    def test_one_setp(self, feed_dict):
+        2
