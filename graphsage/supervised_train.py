@@ -155,6 +155,7 @@ def train(train_data, test_data=None):
     adj_info_ph = tf.constant(minibatch.adj.shape)
 
     adj_info = tf.constant(minibatch.adj, name="adj_info")
+    val_adj_info = tf.constant(minibatch.test_adj, name="val_adj_info")
 
     if FLAGS.model == 'graphsage_mean':
         # Create model
@@ -285,12 +286,12 @@ def train(train_data, test_data=None):
 
             if iter % FLAGS.validate_iter == 0:
                 # Validation
-
+                sampler.adj_info = val_adj_info
                 if FLAGS.validate_batch_size == -1:
                     val_cost, val_f1_mic, val_f1_mac, duration = incremental_evaluate(sess, model, minibatch, FLAGS.batch_size)
                 else:
                     val_cost, val_f1_mic, val_f1_mac, duration = evaluate(model, minibatch, FLAGS.validate_batch_size)
-
+                sampler.adj_info = adj_info
                 epoch_val_costs[-1] += val_cost
 
             if total_steps % FLAGS.print_every == 0:
@@ -322,7 +323,7 @@ def train(train_data, test_data=None):
                 break
     
     print("Optimization Finished!")
-
+    sampler.adj_info = val_adj_info
     val_cost, val_f1_mic, val_f1_mac, duration = incremental_evaluate(model, minibatch, FLAGS.batch_size)
     print("Full validation stats:",
                   "loss=", "{:.5f}".format(val_cost),
