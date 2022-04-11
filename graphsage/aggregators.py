@@ -86,11 +86,12 @@ class GCNAggregator(Layer):
         else:
             name = ''
 
-        with tf.compat.v1.variable_scope(self.name + name + '_vars'):
-            self.vars['weights'] = glorot([neigh_input_dim, output_dim],
-                                                        name='neigh_weights')
-            if self.bias:
-                self.vars['bias'] = zeros([self.output_dim], name='bias')
+        init = tf.initializers.GlorotUniform()
+        self.vars_neigh_weights = tf.Variable(init(shape=[neigh_input_dim, output_dim]),
+                                                trainable=True, name=f'{name}/neigh_weights')
+
+        if self.bias:
+            self.vars_bias = tf.Variable(tf.initializers.zeros()(shape=[self.output_dim]), name=f'{name}/bias')
 
         if self.logging:
             self._log_vars()
@@ -107,11 +108,11 @@ class GCNAggregator(Layer):
             tf.expand_dims(self_vecs, axis=1)], axis=1), axis=1)
        
         # [nodes] x [out_dim]
-        output = tf.matmul(means, self.vars['weights'])
+        output = tf.matmul(means, self.vars_neigh_weights)
 
         # bias
         if self.bias:
-            output += self.vars['bias']
+            output += self.vars_bias
        
         return self.act(output)
 
