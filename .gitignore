@@ -114,3 +114,4 @@ sup-example_data/graphsage_mean_*
 gitmsg.json
 .vscode/*.json
 sup-example_data/*
+example_data/

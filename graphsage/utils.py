@@ -26,13 +26,21 @@ def load_data(prefix, normalize=True, load_walks=False):
 
     if os.path.exists(prefix + "-feats.npy"):
         feats = np.load(prefix + "-feats.npy")
+    elif 'feat' in G.nodes[next(iter(G.nodes))].keys():
+        feats = np.array([G.nodes[e]['feat'] for e in iter(G.nodes)])
     else:
         print("No features present.. Only identity features will be used.")
         feats = None
-    id_map = json.load(open(prefix + "-id_map.json"))
-    id_map = {conversion(k):int(v) for k,v in id_map.items()}
+    if os.path.exists(prefix + "-id_map.json") == 0:
+        id_map = {e: e for e in list(G.nodes)}
+    else:
+        id_map = json.load(open(prefix + "-id_map.json"))
+        id_map = {conversion(k):int(v) for k,v in id_map.items()}
     walks = []
-    class_map = json.load(open(prefix + "-class_map.json"))
+    if os.path.exists((prefix + "-class_map.json")):
+        class_map = json.load(open(prefix + "-class_map.json"))
+    elif 'label' in G.nodes[next(iter(G.nodes))].keys():
+        class_map = {e: G.nodes[e]['label'] for e in iter(G.nodes)}
     if isinstance(list(class_map.values())[0], list):
         lab_conversion = lambda n : n
     else:
