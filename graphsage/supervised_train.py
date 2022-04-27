@@ -7,6 +7,7 @@ import tensorflow as tf
 
 
 import numpy as np
+import pandas as pd
 import sklearn
 from sklearn import metrics
 
@@ -31,12 +32,12 @@ tf.compat.v1.flags.DEFINE_boolean('log_device_placement', False,
                             """Whether to log device placement.""")
 #core params..
 flags.DEFINE_string('model', 'graphsage_mean', 'model names. See README for possible values.')  
-flags.DEFINE_float('learning_rate', 0.01, 'initial learning rate.')
+flags.DEFINE_float('learning_rate', 0.001, 'initial learning rate.')
 flags.DEFINE_string("model_size", "small", "Can be big or small; model specific def'ns")
 flags.DEFINE_string('train_prefix', '', 'prefix identifying training data. must be specified.')
 
 # left to default values in main experiments 
-flags.DEFINE_integer('epochs', 10, 'number of epochs to train.')
+flags.DEFINE_integer('epochs', 100, 'number of epochs to train.')
 flags.DEFINE_float('dropout', 0.0, 'dropout rate (1 - keep probability).')
 flags.DEFINE_float('weight_decay', 0.0, 'weight for l2 loss on embedding matrix.')
 flags.DEFINE_integer('max_degree', 128, 'maximum node degree.')
@@ -76,7 +77,27 @@ def evaluate(model, minibatch_iter, size=None):
     feed_dict_val, labels = minibatch_iter.node_val_feed_dict(size)
     node_outs_val = model.test_one_step(feed_dict_val)
     mic, mac = calc_f1(labels, node_outs_val[0])
-    return node_outs_val[1].numpy(), mic, mac, (time.time() - t_test)
+    '''
+    # Laurence 20220426
+    Add calc_rdr
+    '''
+    # outnode_outs_val[0].numpy()[:,1]
+    feed_dict_te, labels_te = minibatch_iter.node_val_feed_dict(test=True)
+    node_outs_te = model.test_one_step(feed_dict_te)
+    pred_te = node_outs_te[0].numpy()[:,1]
+    labels_te = feed_dict_te['labels'].numpy()[:,1]
+    df_te = pd.DataFrame({'pred_te':pred_te,'target': labels_te})
+    sorted_pos_score = df_te.query('target==1.0')['pred_te'].sort_values().values
+    rdno_at_0 = df_te.query(f'pred_te<{sorted_pos_score[0]}').shape[0]
+    rdno_at_1 = df_te.query(f'pred_te<{sorted_pos_score[1]}').shape[0] - 1
+    rdno_at_2 = df_te.query(f'pred_te<{sorted_pos_score[2]}').shape[0] - 2
+    rdno_at_4 = df_te.query(f'pred_te<{sorted_pos_score[4]}').shape[0] - 4
+    rdr_info = {'sb@0':rdno_at_0, 
+                'sb@1':rdno_at_1, 
+                'sb@2':rdno_at_2, 
+                'sb@4':rdno_at_4}
+
+    return node_outs_val[1].numpy(), mic, mac, (time.time() - t_test), rdr_info
 
 def log_dir():
     log_dir = FLAGS.base_log_dir + "/sup-" + FLAGS.train_prefix.split("/")[-2]
@@ -290,7 +311,7 @@ def train(train_data, test_data=None):
                 if FLAGS.validate_batch_size == -1:
                     val_cost, val_f1_mic, val_f1_mac, duration = incremental_evaluate(sess, model, minibatch, FLAGS.batch_size)
                 else:
-                    val_cost, val_f1_mic, val_f1_mac, duration = evaluate(model, minibatch, FLAGS.validate_batch_size)
+                    val_cost, val_f1_mic, val_f1_mac, duration, rdr_info = evaluate(model, minibatch, FLAGS.validate_batch_size)
                 sampler.adj_info = adj_info
                 epoch_val_costs[-1] += val_cost
 
@@ -311,6 +332,7 @@ def train(train_data, test_data=None):
                       "val_loss=", "{:.5f}".format(val_cost),
                       "val_f1_mic=", "{:.5f}".format(val_f1_mic), 
                       "val_f1_mac=", "{:.5f}".format(val_f1_mac), 
+                      "SB=",rdr_info,
                       "time=", "{:.5f}".format(avg_time))
  
             iter += 1
