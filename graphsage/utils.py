@@ -16,7 +16,7 @@ minor = version_info[1]
 WALK_LEN=5
 N_WALKS=50
 
-def load_data(prefix, normalize=True, load_walks=False):
+def load_data(prefix, normalize=True, load_walks=False, remove_isolated_nodes=False):
     G_data = json.load(open(prefix + "-G.json"))
     G = json_graph.node_link_graph(G_data)
     if isinstance(next(iter(G.nodes())), int):
@@ -47,6 +47,11 @@ def load_data(prefix, normalize=True, load_walks=False):
         lab_conversion = lambda n : int(n)
 
     class_map = {conversion(k):lab_conversion(v) for k,v in class_map.items()}
+
+    ## Remove all nodes that has zero degree if needed
+    if remove_isolated_nodes:
+        n_isolated_ls = [n for n in G.nodes if G.degree(n)==0]
+        G.remove_nodes_from(n_isolated_ls)
 
     ## Remove all nodes that do not have val/test annotations
     ## (necessary because of networkx weirdness with the Reddit data)

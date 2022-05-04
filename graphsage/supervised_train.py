@@ -59,6 +59,10 @@ flags.DEFINE_integer('gpu', 1, "which gpu to use.")
 flags.DEFINE_integer('print_every', 5, "How often to print training info.")
 flags.DEFINE_integer('max_total_steps', 10**10, "Maximum total number of iterations")
 
+# Add-hod
+flags.DEFINE_boolean('remove_isolated_nodes', True, 'whether to remove nodes with degree=0')
+
+
 os.environ["CUDA_VISIBLE_DEVICES"]=str(FLAGS.gpu)
 
 GPU_MEM_FRACTION = 0.8
@@ -364,7 +368,7 @@ def train(train_data, test_data=None):
 
 def main(argv=None):
     print("Loading training data..")
-    train_data = load_data(FLAGS.train_prefix)
+    train_data = load_data(FLAGS.train_prefix, remove_isolated_nodes=FLAGS.remove_isolated_nodes)
     print("Done loading training data..")
     train(train_data)
 
