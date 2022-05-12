@@ -1,6 +1,7 @@
 from __future__ import division
 from __future__ import print_function
 
+import copy
 import os
 import time
 import tensorflow as tf
@@ -16,6 +17,8 @@ from graphsage.models import SAGEInfo
 from graphsage.minibatch import NodeMinibatchIterator
 from graphsage.neigh_samplers import UniformNeighborSampler
 from graphsage.utils import load_data
+
+from datetime import datetime
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 
@@ -61,8 +64,10 @@ flags.DEFINE_integer('max_total_steps', 10**10, "Maximum total number of iterati
 
 # Add-hod
 flags.DEFINE_boolean('remove_isolated_nodes', True, 'whether to remove nodes with degree=0')
+flags.DEFINE_list('k_of_sb', [0,2,4,8], 'The value of k of sb@k')
 
 
+datetime_now = datetime.now().strftime("%d-%m-%Y-%H:%M:%S")
 os.environ["CUDA_VISIBLE_DEVICES"]=str(FLAGS.gpu)
 
 GPU_MEM_FRACTION = 0.8
@@ -76,7 +81,7 @@ def calc_f1(y_true, y_pred):
     return metrics.f1_score(y_true, y_pred, average="micro"), metrics.f1_score(y_true, y_pred, average="macro")
 
 # Define model evaluation function
-def evaluate(model, minibatch_iter, size=None):
+def evaluate(model, minibatch_iter, epoch, size=None):
     t_test = time.time()
     feed_dict_val, labels = minibatch_iter.node_val_feed_dict(size)
     node_outs_val = model.test_one_step(feed_dict_val)
@@ -103,16 +108,39 @@ def evaluate(model, minibatch_iter, size=None):
                 'sb@2':rdno_at_2, 
                 'sb@4':rdno_at_4,
                 'sb@8':rdno_at_8,
-                'sb@16':rdno_at_16}
+                'sb@16':rdno_at_16,
+                }
+    rdr_info4cb = copy.deepcopy(rdr_info)
+    rdr_info4cb.update({'f1_mic': mic, 'f1_mac': mac,})
+
+    for cb in model.checkpoint_cb_ls:
+        cb.epochs_since_last_save += 1
+        cb._save_model(epoch, batch=None, logs=rdr_info4cb)
+
+        if cb.save_best_only:
+            current = rdr_info4cb.get(cb.monitor)
+            if cb.best == current:
+                # It means that we just save a new model version, 
+                # then we need to save some helper files to verity the model weights.
+                sample_to_check_model_weight_path = '/'.join(cb.filepath.split('/')[:-1])
+                feed_dict_val_np = {k: v.numpy() for k, v in feed_dict_val.items()}
+                feed_dict_val_np_result = model.test_one_step(feed_dict_val_np)
+                feed_dict_val_np_result = [v.numpy() for v in feed_dict_val_np_result]
+                feed_dict_val_np_result.append({'epoch':epoch})
+                feed_dict_val_np_result = np.array(feed_dict_val_np_result, dtype=object)
+                np.save(sample_to_check_model_weight_path + f'/check_{cb.monitor}.npy',feed_dict_val_np )
+                np.save(sample_to_check_model_weight_path + f'/check_{cb.monitor}_result.npy',feed_dict_val_np_result )
+
 
     return node_outs_val[1].numpy(), mic, mac, (time.time() - t_test), rdr_info
 
 def log_dir():
     log_dir = FLAGS.base_log_dir + "/sup-" + FLAGS.train_prefix.split("/")[-2]
-    log_dir += "/{model:s}_{model_size:s}_{lr:0.4f}/".format(
+    log_dir += "/{model:s}_{model_size:s}_{lr:0.4f}_{datetime_now}/".format(
             model=FLAGS.model,
             model_size=FLAGS.model_size,
-            lr=FLAGS.learning_rate)
+            lr=FLAGS.learning_rate,
+            datetime_now=datetime_now)
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     return log_dir
@@ -282,8 +310,21 @@ def train(train_data, test_data=None):
     #config.gpu_options.per_process_gpu_memory_fraction = GPU_MEM_FRACTION
     config.allow_soft_placement = True
     
-    # Initialize session
-    
+    log_dir()
+    # Initialize checkpoint
+    checkpoint_cb_ls =  []
+    for k in FLAGS.k_of_sb:
+        one_cb = tf.keras.callbacks.ModelCheckpoint(
+                    filepath = log_dir() + f'weights.{{epoch:03d}}' + f'-sb@{k}-{{sb@{k}}}' + f'f1_mic-{{f1_mic:.3f}}' + f'-f1_mac-{{f1_mac:.3f}}',
+                    save_weights_only=True,
+                    monitor=f'sb@{k}',
+                    mode='max',
+                    verbose=0,
+                    save_freq='epoch',
+                    save_best_only=True)
+        checkpoint_cb_ls.append(one_cb)
+        one_cb.model = model
+    model.checkpoint_cb_ls = checkpoint_cb_ls
   
     summary_writer = tf.summary.create_file_writer(log_dir())
      
@@ -319,7 +360,7 @@ def train(train_data, test_data=None):
                 if FLAGS.validate_batch_size == -1:
                     val_cost, val_f1_mic, val_f1_mac, duration = incremental_evaluate(sess, model, minibatch, FLAGS.batch_size)
                 else:
-                    val_cost, val_f1_mic, val_f1_mac, duration, rdr_info = evaluate(model, minibatch, FLAGS.validate_batch_size)
+                    val_cost, val_f1_mic, val_f1_mac, duration, rdr_info = evaluate(model, minibatch, epoch, FLAGS.validate_batch_size)
                 sampler.adj_info = adj_info
                 epoch_val_costs[-1] += val_cost
 
