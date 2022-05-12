@@ -96,10 +96,14 @@ def evaluate(model, minibatch_iter, size=None):
     rdno_at_1 = df_te.query(f'pred_te<{sorted_pos_score[1]}').shape[0] - 1
     rdno_at_2 = df_te.query(f'pred_te<{sorted_pos_score[2]}').shape[0] - 2
     rdno_at_4 = df_te.query(f'pred_te<{sorted_pos_score[4]}').shape[0] - 4
+    rdno_at_8 = df_te.query(f'pred_te<{sorted_pos_score[8]}').shape[0] - 8
+    rdno_at_16 = df_te.query(f'pred_te<{sorted_pos_score[16]}').shape[0] - 16
     rdr_info = {'sb@0':rdno_at_0, 
                 'sb@1':rdno_at_1, 
                 'sb@2':rdno_at_2, 
-                'sb@4':rdno_at_4}
+                'sb@4':rdno_at_4,
+                'sb@8':rdno_at_8,
+                'sb@16':rdno_at_16}
 
     return node_outs_val[1].numpy(), mic, mac, (time.time() - t_test), rdr_info
 
