@@ -116,3 +116,4 @@ gitmsg.json
 sup-example_data/*
 example_data/
 notebook/neo4j_explore_G.ipynb
+notebook/

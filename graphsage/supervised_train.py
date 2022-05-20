@@ -65,10 +65,11 @@ flags.DEFINE_integer('max_total_steps', 10**10, "Maximum total number of iterati
 # Add-hod
 flags.DEFINE_boolean('remove_isolated_nodes', True, 'whether to remove nodes with degree=0')
 flags.DEFINE_list('k_of_sb', [0,2,4,8], 'The value of k of sb@k')
+flags.DEFINE_boolean('train_return_model_once_ready', False, 'Whether to return model without training in train()')
 
 
 datetime_now = datetime.now().strftime("%d-%m-%Y-%H:%M:%S")
-os.environ["CUDA_VISIBLE_DEVICES"]=str(FLAGS.gpu)
+# os.environ["CUDA_VISIBLE_DEVICES"]=str(FLAGS.gpu)
 
 GPU_MEM_FRACTION = 0.8
 
@@ -310,6 +311,9 @@ def train(train_data, test_data=None):
     #config.gpu_options.per_process_gpu_memory_fraction = GPU_MEM_FRACTION
     config.allow_soft_placement = True
     
+    if FLAGS.train_return_model_once_ready:
+        return model # Laurence 20220513
+
     log_dir()
     # Initialize checkpoint
     checkpoint_cb_ls =  []
