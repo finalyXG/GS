@@ -116,21 +116,29 @@ def evaluate(model, minibatch_iter, epoch, size=None):
 
     for cb in model.checkpoint_cb_ls:
         cb.epochs_since_last_save += 1
+        old_best = cb.best
         cb._save_model(epoch, batch=None, logs=rdr_info4cb)
 
         if cb.save_best_only:
             current = rdr_info4cb.get(cb.monitor)
-            if cb.best == current:
+            if cb.best != old_best:
                 # It means that we just save a new model version, 
                 # then we need to save some helper files to verity the model weights.
                 sample_to_check_model_weight_path = '/'.join(cb.filepath.split('/')[:-1])
-                feed_dict_val_np = {k: v.numpy() for k, v in feed_dict_val.items()}
-                feed_dict_val_np_result = model.test_one_step(feed_dict_val_np)
-                feed_dict_val_np_result = [v.numpy() for v in feed_dict_val_np_result]
-                feed_dict_val_np_result.append({'epoch':epoch})
-                feed_dict_val_np_result = np.array(feed_dict_val_np_result, dtype=object)
-                np.save(sample_to_check_model_weight_path + f'/check_{cb.monitor}.npy',feed_dict_val_np )
-                np.save(sample_to_check_model_weight_path + f'/check_{cb.monitor}_result.npy',feed_dict_val_np_result )
+                feed_dict_te_np = {k: v.numpy() for k, v in feed_dict_te.items()}
+                feed_dict_te_np.update({
+                    'sample': node_outs_te[2][0],
+                    'support_sizes': node_outs_te[2][1],
+                })
+                feed_dict_te_np_result = model.test_one_step(feed_dict_te_np)
+                feed_dict_te_np_result = [v.numpy() for v in feed_dict_te_np_result]
+                feed_dict_te_np_result.append({'epoch':epoch + 1}) # Align epoch from graphsage to checkpoint. CAN NOT CUT. 
+                feed_dict_te_np_result = np.array(feed_dict_te_np_result, dtype=object)
+                np.save(sample_to_check_model_weight_path + f'/check_{cb.monitor}.npy',feed_dict_te_np )
+                np.save(sample_to_check_model_weight_path + f'/check_{cb.monitor}_result.npy',feed_dict_te_np_result )
+
+
+
 
 
     return node_outs_val[1].numpy(), mic, mac, (time.time() - t_test), rdr_info
@@ -323,7 +331,7 @@ def train(train_data, test_data=None):
                     save_weights_only=True,
                     monitor=f'sb@{k}',
                     mode='max',
-                    verbose=0,
+                    verbose=1,
                     save_freq='epoch',
                     save_best_only=True)
         checkpoint_cb_ls.append(one_cb)
