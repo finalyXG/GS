@@ -169,8 +169,13 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         return preds, loss
 
     #Laurence 20220407
-    def test_one_step(self, feed_dict):
-        samples1, support_sizes1 = self.sample(feed_dict['batch'], self.layer_infos, feed_dict['batch_size'])
+    def test_one_step(self, feed_dict, return_sampled_nodes=False, return_node_feat=False):
+        if 'sample' in feed_dict.keys() and 'support_sizes' in feed_dict.keys():
+            samples1 = feed_dict['sample']
+            support_sizes1 = feed_dict['support_sizes']
+        else:
+            samples1, support_sizes1 = self.sample(feed_dict['batch'], self.layer_infos, feed_dict['batch_size'])
+            # samples2, support_sizes2 = self.sample(feed_dict['batch'], self.layer_infos, feed_dict['batch_size'])
         num_samples = [layer_info.num_samples for layer_info in self.layer_infos]
 
         outputs1, _ = self.aggregate(samples1, [self.features], self.dims, num_samples,
@@ -185,10 +190,16 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         preds = self.predict_input(node_preds)
         loss = self._loss(node_preds, feed_dict['labels'], is_return=True)
 
-       
-        return preds, loss
+        rs = [preds, loss]
+        if return_sampled_nodes:
+            rs.append((samples1, support_sizes1))
+        if return_node_feat:
+            rs.append(outputs1)
+        return rs
+
+        # if return_sampled_nodes:
+        #     return preds, loss, (samples1, support_sizes1)
+        # else:       
+        #     return preds, loss
 
 
-    #Laurence 20220406
-    def test_one_setp(self, feed_dict):
-        2

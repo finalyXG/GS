@@ -93,7 +93,7 @@ def evaluate(model, minibatch_iter, epoch, size=None):
     '''
     # outnode_outs_val[0].numpy()[:,1]
     feed_dict_te, labels_te = minibatch_iter.node_val_feed_dict(test=True)
-    node_outs_te = model.test_one_step(feed_dict_te)
+    node_outs_te = model.test_one_step(feed_dict_te, return_sampled_nodes=True)
     pred_te = node_outs_te[0].numpy()[:,1]
     labels_te = feed_dict_te['labels'].numpy()[:,1]
     df_te = pd.DataFrame({'pred_te':pred_te,'target': labels_te})
