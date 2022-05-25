@@ -12,7 +12,7 @@ def fit_lr(X, Y, **kargs):
     logreg = LogisticRegression(**kargs).fit(X, Y)
     return logreg
 
-def lr_eval(logreg, feat_np_tr, feat_np_val, target_tr, target_val):
+def lr_eval(logreg, feat_np_tr, feat_np_val, target_tr, target_val, log=None):
     def f(feat_np, Y, logreg):
         y_hat = logreg.predict(feat_np)
         cnf_matrix = metrics.confusion_matrix(Y, y_hat)
@@ -42,10 +42,16 @@ def lr_eval(logreg, feat_np_tr, feat_np_val, target_tr, target_val):
                   'reduction rate': [rdr_val]
                  })
 
-    print('Training:')
-    print(df_out_tr.to_markdown())
-    print('Validation:')
-    print(df_out_val.to_markdown())
+    if log==None:
+        print('Training:')
+        print(df_out_tr.to_markdown())
+        print('Validation:')
+        print(df_out_val.to_markdown())
+    else:
+        log.info('Training:')
+        log.info('\n'+df_out_tr.to_markdown())
+        log.info('Validation:')
+        log.info('\n'+df_out_val.to_markdown())
 
 
 
