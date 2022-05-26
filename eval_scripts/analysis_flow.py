@@ -1,3 +1,4 @@
+import argparse
 from datetime import datetime
 import glob
 import json
@@ -47,6 +48,7 @@ exp_config = {
         'gs_train_prefix': "../example_data/livi-test-data-20220511",
         'model_path': "/mnt/c/Users/Laurence_Liu/Documents/Regtics_proj/NWA_AI/sup-example_data/graphsage_mean_small_0.0010_20-05-2022-10:34:09/weights.003-sb@0-22f1_mic-0.969-f1_mac-0.706",
         'PROJ_PATH' : PROJ_PATH,
+        'yyyymmdd_HHMM': datetime.today().strftime('%Y%m%d_%H%M'),
         'NB_ITER': 3,
         'set_FLAGS': lambda : (
             FLAGS.mark_as_parsed(), 
@@ -164,12 +166,20 @@ exp_config = {
         ),
         'set_logging_info': lambda : (
             proj_path := exp_config['global']['PROJ_PATH'],
-            yyyymmdd_HHMM := datetime.today().strftime('%Y%m%d_%H%M'),
-            staging := f"{proj_path}/staging/",
+            yyyymmdd_HHMM := exp_config['global']['yyyymmdd_HHMM'],
+            staging := f"{proj_path}/staging/tmp_t/",
             Path(f"{staging}{yyyymmdd_HHMM}").mkdir(parents=True, exist_ok=True),
             logging_path := f'{staging}{yyyymmdd_HHMM}/output.log',
             logging.basicConfig(filename=logging_path, filemode='a', level=logging.DEBUG),
             exp_config['global'].update({'staging_path': f'{staging}{yyyymmdd_HHMM}'}),
+            hdlr := logging.StreamHandler(),
+            fhdlr := logging.FileHandler(f"{logging_path}", mode='w', encoding='utf-8'),
+            formatter := logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'),
+            hdlr.setFormatter(formatter),
+            fhdlr.setFormatter(formatter),
+            log.addHandler(hdlr),
+            log.addHandler(fhdlr),
+            log.setLevel(logging.DEBUG),
         ),
         'save_l2m_df': lambda : (
             df_combine_info := exp_config['global']['df_combine_info'],
@@ -309,7 +319,14 @@ exp_config = {
 }
 
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Analysis Flow.')
+    parser.add_argument('--save_to_folder_by_date', type=str, help='Date value yyyymmdd_HHMM as saved folder name', default=None)
+
+    args = parser.parse_args()
+    if args.save_to_folder_by_date:
+        exp_config['global']['yyyymmdd_HHMM'] = args.save_to_folder_by_date
+
     for e in exp_config['global']['run_step_ls']:
         exp_config['global'][e]()
     
