@@ -218,7 +218,7 @@ def train(train_data, test_data=None):
             batch_size=FLAGS.batch_size,
             max_degree=FLAGS.max_degree, 
             context_pairs = context_pairs)
-    adj_info_ph = tf.constant(minibatch.adj.shape)
+    # adj_info_ph = tf.constant(minibatch.adj.shape)
 
     adj_info = tf.constant(minibatch.adj, name="adj_info")
     val_adj_info = tf.constant(minibatch.test_adj, name="val_adj_info")

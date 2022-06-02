@@ -209,8 +209,9 @@ class NodeMinibatchIterator(object):
 
         self.val_nodes = [n for n in list(self.G.nodes()) if self.G.nodes[n]['val']]
         self.test_nodes = [n for n in list(self.G.nodes()) if self.G.nodes[n]['test']]
+        self.fake_nodes = [n for n in list(self.G.nodes) if 'real' in self.G.nodes[n].keys() and self.G.nodes[n]['real'] == 0]
 
-        self.no_train_nodes_set = set(self.val_nodes + self.test_nodes)
+        self.no_train_nodes_set = set(self.val_nodes + self.test_nodes + self.fake_nodes)
         self.train_nodes = set(G.nodes()).difference(self.no_train_nodes_set)
         # don't train on nodes that only have edges to test set
         self.train_nodes = [n for n in self.train_nodes if self.deg[id2idx[n]] > 0]
