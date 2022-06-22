@@ -74,12 +74,12 @@ exp_config = {
             can_graph_dict := {n: 1 for n in minibatch_it.train_nodes + minibatch_it.val_nodes + minibatch_it.test_nodes},
             df_G_data := pd.DataFrame(),
             df_G_data := df_G_data.assign(
-                id=[n['id'] for n in G_data['nodes']],
-                feat=[n['feat'] for n in G_data['nodes']],
-                label=[n['label'][1] for n in G_data['nodes']],
-                val = [n['val'] for n in G_data['nodes']],
-                test = [n['test'] for n in G_data['nodes']],
-                can_graph = [can_graph_dict.setdefault(n['id'], 0) for n in G_data['nodes'] ],
+                id=[n['id'] for n in G_data['nodes'] if n.setdefault('real', False)],
+                feat=[n['feat'] for n in G_data['nodes'] if n.setdefault('real', False)],
+                label=[n['label'][1] for n in G_data['nodes'] if n.setdefault('real', False)],
+                val = [n['val'] for n in G_data['nodes'] if n.setdefault('real', False)],
+                test = [n['test'] for n in G_data['nodes'] if n.setdefault('real', False)],
+                can_graph = [can_graph_dict.setdefault(n['id'], 0) for n in G_data['nodes'] if n.setdefault('real', False) ],
             ),
             exp_config['global'].setdefault('df_G_data', df_G_data)
         ),
