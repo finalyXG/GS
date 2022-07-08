@@ -32,15 +32,20 @@ def load_data(prefix, normalize=True, load_walks=False, remove_isolated_nodes=Fa
     if os.path.exists(prefix + "-feats.npy"):
         feats = np.load(prefix + "-feats.npy")
     elif 'feat' in G.nodes[next(iter(G.nodes))].keys():
-        feats = np.array([G.nodes[e]['feat'] for e in iter(G.nodes)])
+        feats = np.array([G.nodes[n]['feat'] for n in iter(G.nodes)])
     else:
         print("No features present.. Only identity features will be used.")
         feats = None
+    # Laurence 20220705
     if os.path.exists(prefix + "-id_map.json") == 0:
-        id_map = {e: e for e in list(G.nodes)}
+        id_map = {v1: v2 for v1,v2 in zip(list(G.nodes), range(len(G.nodes)))}
+        # id_map = {v1: v2 for v1,v2 in zip(list(G.nodes), range(len(G.nodes)))}
+        # id_map = {v1: v1 for v1 in list(G.nodes)}
     else:
         id_map = json.load(open(prefix + "-id_map.json"))
         id_map = {conversion(k):int(v) for k,v in id_map.items()}
+    
+
     walks = []
     if os.path.exists((prefix + "-class_map.json")):
         class_map = json.load(open(prefix + "-class_map.json"))
@@ -66,6 +71,7 @@ def load_data(prefix, normalize=True, load_walks=False, remove_isolated_nodes=Fa
             G.remove_node(node)
             broken_count += 1
     print("Removed {:d} nodes that lacked proper annotations due to networkx versioning issues".format(broken_count))
+
 
     ## If no "val" exists, take a random 10 percentange of "train" data as "val"
     val_nb = sum([1 if (G.nodes[node]['val'] == True) and (G.nodes[node]['real'] == True) else 0 for node in G.nodes])
