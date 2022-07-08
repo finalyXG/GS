@@ -78,11 +78,7 @@ def load_data(prefix, normalize=True, load_walks=False, remove_isolated_nodes=Fa
     tr_nb = sum([1 if (G.nodes[node]['test'] == False) and (G.nodes[node]['val'] == False) and (G.nodes[node]['real'] == True) else 0 for node in G.nodes])
     te_nb = sum([1 if (G.nodes[node]['test'] == True) and (G.nodes[node]['real'] == True) else 0 for node in G.nodes])
 
-    if val_nb == 0:
-        node_id_tr = [node for node in G.nodes if (G.nodes[node]['test'] == False) and (G.nodes[node]['val'] == False) and (G.nodes[node]['real'] == True) ]
-        sample_id_ls = random.sample(node_id_tr, int(tr_nb * 0.05) )
-        for n in sample_id_ls:
-            G.nodes[n]['val'] = True
+    #     node_id_tr = [node for node in G.nodes if (G.nodes[node]['test'] == False) and (G.nodes[node]['val'] == False) and (G.nodes[node]['real'] == True) ]
 
     node_id_tr_set = set([node for node in G.nodes if (G.nodes[node]['test'] == False) and (G.nodes[node]['val'] == False) and (G.nodes[node]['real'] == True) ])
     node_id_val_set = set([node for node in G.nodes if (G.nodes[node]['test'] == False) and (G.nodes[node]['val'] == True) and (G.nodes[node]['real'] == True) ])
@@ -90,7 +86,7 @@ def load_data(prefix, normalize=True, load_walks=False, remove_isolated_nodes=Fa
     node_real_set = {node:1 for node in G.nodes if (G.nodes[node]['real'] == True) }
     # Remove connected components (cc) that does not contain real data
     for cc in list(nx.connected_components(G)):
-        has_real = False
+        has_real = False # Assuming has real data first
         fake_ls = []
         for nc in cc:
             if node_real_set.setdefault(nc, 0) == 1:
@@ -101,8 +97,6 @@ def load_data(prefix, normalize=True, load_walks=False, remove_isolated_nodes=Fa
             G.remove_nodes_from(list(cc))
         if len(fake_ls) > 0 and len(fake_ls) / len(cc) < 0.1 or len(fake_ls) / len(cc) > 0.9:
             G.remove_nodes_from(fake_ls)
-            
-
 
 
     ## Make sure the graph has edge train_removed annotations
