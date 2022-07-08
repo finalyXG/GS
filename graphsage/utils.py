@@ -24,6 +24,11 @@ def load_data(prefix, normalize=True, load_walks=False, remove_isolated_nodes=Fa
     else:
         conversion = lambda n : n
 
+    # Laurence 20220705
+    # Update can_graph attribute
+    for n in G.nodes:
+        G.nodes[n]['can_graph'] = G.degree(n) > 0
+
     if os.path.exists(prefix + "-feats.npy"):
         feats = np.load(prefix + "-feats.npy")
     elif 'feat' in G.nodes[next(iter(G.nodes))].keys():
