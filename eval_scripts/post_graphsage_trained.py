@@ -6,9 +6,12 @@ import numpy as np
 
 from sklearn.linear_model import LogisticRegression
 from sklearn import metrics
-
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 import tensorflow as tf
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 import tqdm
+
 
 
 def get_tr_iter(train_data, FLAGS, NodeMinibatchIterator):
