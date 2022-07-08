@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import copy
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # 🚩: disable the import warnings and infos in developmet 
 import time
 import tensorflow as tf
 
@@ -21,6 +22,7 @@ from graphsage.utils import load_data
 from datetime import datetime
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+tf.get_logger().setLevel('ERROR')
 
 # Set random seed
 seed = 123
