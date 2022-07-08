@@ -86,15 +86,18 @@ def calc_f1(y_true, y_pred):
 # Define model evaluation function
 def evaluate(model, minibatch_iter, epoch, size=None):
     t_test = time.time()
-    feed_dict_val, labels = minibatch_iter.node_val_feed_dict(size)
+    feed_dict_val, labels = minibatch_iter.node_val_feed_dict(test=True)
     node_outs_val = model.test_one_step(feed_dict_val)
     mic, mac = calc_f1(labels, node_outs_val[0])
+    # Laurence 20220705
+    mic, mac = 0, 0
     '''
     # Laurence 20220426
     Add calc_rdr
     '''
     # outnode_outs_val[0].numpy()[:,1]
-    feed_dict_te, labels_te = minibatch_iter.node_val_feed_dict(test=True)
+    # feed_dict_te, labels_te = minibatch_iter.node_val_feed_dict(test=True) # Laurence 20220705
+    feed_dict_te, labels_te = feed_dict_val, labels
     node_outs_te = model.test_one_step(feed_dict_te, return_sampled_nodes=True)
     pred_te = node_outs_te[0].numpy()[:,1]
     labels_te = feed_dict_te['labels'].numpy()[:,1]
