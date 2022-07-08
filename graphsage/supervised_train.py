@@ -343,7 +343,7 @@ def train(train_data, test_data=None):
         one_cb.model = model
     model.checkpoint_cb_ls = checkpoint_cb_ls
   
-    summary_writer = tf.summary.create_file_writer(log_dir())
+    # summary_writer = tf.summary.create_file_writer(log_dir())
      
     # Init variables
     
@@ -381,9 +381,9 @@ def train(train_data, test_data=None):
                 sampler.adj_info = adj_info
                 epoch_val_costs[-1] += val_cost
 
-            if total_steps % FLAGS.print_every == 0:
-                with summary_writer.as_default(step=total_steps):
-                    tf.summary.histogram(name='distribution', data=outs[0])
+            # if total_steps % FLAGS.print_every == 0:
+            #     with summary_writer.as_default(step=total_steps):
+            #         tf.summary.histogram(name='distribution', data=outs[0])
 
     
             # Print results
