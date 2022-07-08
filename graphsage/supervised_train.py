@@ -410,17 +410,17 @@ def train(train_data, test_data=None):
         if total_steps > FLAGS.max_total_steps:
                 break
     
-    print("Optimization Finished!")
-    sampler.adj_info = val_adj_info
-    val_cost, val_f1_mic, val_f1_mac, duration = incremental_evaluate(model, minibatch, FLAGS.batch_size)
-    print("Full validation stats:",
-                  "loss=", "{:.5f}".format(val_cost),
-                  "f1_micro=", "{:.5f}".format(val_f1_mic),
-                  "f1_macro=", "{:.5f}".format(val_f1_mac),
-                  "time=", "{:.5f}".format(duration))
-    with open(log_dir() + "val_stats.txt", "w") as fp:
-        fp.write("loss={:.5f} f1_micro={:.5f} f1_macro={:.5f} time={:.5f}".
-                format(val_cost, val_f1_mic, val_f1_mac, duration))
+    # print("Optimization Finished!")
+    # sampler.adj_info = val_adj_info
+    # val_cost, val_f1_mic, val_f1_mac, duration = incremental_evaluate(model, minibatch, FLAGS.batch_size)
+    # print("Full validation stats:",
+    #               "loss=", "{:.5f}".format(val_cost),
+    #               "f1_micro=", "{:.5f}".format(val_f1_mic),
+    #               "f1_macro=", "{:.5f}".format(val_f1_mac),
+    #               "time=", "{:.5f}".format(duration))
+    # with open(log_dir() + "val_stats.txt", "w") as fp:
+    #     fp.write("loss={:.5f} f1_micro={:.5f} f1_macro={:.5f} time={:.5f}".
+    #             format(val_cost, val_f1_mic, val_f1_mac, duration))
 
     print("Writing test set stats to file (don't peak!)")
     val_cost, val_f1_mic, val_f1_mac, duration = incremental_evaluate(model, minibatch, FLAGS.batch_size, test=True)
