@@ -14,6 +14,8 @@ def fit_lr(X, Y, **kargs):
 
 def lr_eval(logreg, feat_np_tr, feat_np_val, target_tr, target_val, log=None):
     def f(feat_np, Y, logreg):
+        if (sum(Y) == 0):
+            return 0, len(Y), 0, 0
         y_hat = logreg.predict(feat_np)
         cnf_matrix = metrics.confusion_matrix(Y, y_hat)
         df_cnf_mx = pd.DataFrame(cnf_matrix)
