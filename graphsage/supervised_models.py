@@ -127,7 +127,8 @@ class SupervisedGraphsage(models.SampleAndAggregate):
                     logits=node_preds,
                     labels=tf.stop_gradient(labels)))
 
-        tf.compat.v1.summary.scalar('loss', self.loss)
+        # Laurence 20220705
+        # tf.compat.v1.summary.scalar('loss', self.loss)
         if is_return:
             return self.loss
 
