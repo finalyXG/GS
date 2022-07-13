@@ -250,6 +250,25 @@ def train(train_data, test_data=None):
                                      sigmoid_loss = FLAGS.sigmoid,
                                      identity_dim = FLAGS.identity_dim,
                                      logging=True)
+                        
+    elif FLAGS.model == 'graphsage_attn':
+        # Create model
+        sampler = UniformNeighborSampler(adj_info)
+        layer_infos = [SAGEInfo("node", sampler, FLAGS.samples_1, 2*FLAGS.dim_1),
+                            SAGEInfo("node", sampler, FLAGS.samples_2, 2*FLAGS.dim_2)]
+
+        model = SupervisedGraphsage(num_classes, placeholders, 
+                                     features,
+                                     adj_info,
+                                     minibatch.deg,
+                                     layer_infos=layer_infos, 
+                                     aggregator_type="attn",
+                                     model_size=FLAGS.model_size,
+                                     concat=False,
+                                     sigmoid_loss = FLAGS.sigmoid,
+                                     identity_dim = FLAGS.identity_dim,
+                                     logging=True)
+
     elif FLAGS.model == 'gcn':
         # Create model
         sampler = UniformNeighborSampler(adj_info)
@@ -293,12 +312,12 @@ def train(train_data, test_data=None):
                                     features,
                                     adj_info,
                                     minibatch.deg,
-                                     layer_infos=layer_infos, 
-                                     aggregator_type="maxpool",
-                                     model_size=FLAGS.model_size,
-                                     sigmoid_loss = FLAGS.sigmoid,
-                                     identity_dim = FLAGS.identity_dim,
-                                     logging=True)
+                                    layer_infos=layer_infos, 
+                                    aggregator_type="maxpool",
+                                    model_size=FLAGS.model_size,
+                                    sigmoid_loss = FLAGS.sigmoid,
+                                    identity_dim = FLAGS.identity_dim,
+                                    logging=True)
 
     elif FLAGS.model == 'graphsage_meanpool':
         sampler = UniformNeighborSampler(adj_info)
