@@ -11,6 +11,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 import tqdm
+from graphsage.supervised_train import load_data, train, FLAGS
 
 
 
@@ -51,6 +52,9 @@ def get_df_gs_info(train_data, FLAGS, NodeMinibatchIterator, model, nb_iter=1):
     # Laurence 2022076
     minibatch_it = get_tr_iter(train_data, FLAGS, NodeMinibatchIterator)
     idx2id = {v: k for k, v in minibatch_it.id2idx.items()}
+
+    # Laurence 20220713
+    idx2id[len(idx2id)] = -1
     
     for i in tqdm.tqdm(range(nb_iter), desc="Generating training info:"):
         # Laurence 20220706
