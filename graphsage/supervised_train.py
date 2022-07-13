@@ -46,13 +46,13 @@ flags.DEFINE_integer('epochs', 200, 'number of epochs to train.')
 flags.DEFINE_float('dropout', 0.0, 'dropout rate (1 - keep probability).')
 flags.DEFINE_float('weight_decay', 0.0, 'weight for l2 loss on embedding matrix.')
 flags.DEFINE_integer('max_degree', 128, 'maximum node degree.')
-flags.DEFINE_integer('samples_1', 25, 'number of samples in layer 1')
-flags.DEFINE_integer('samples_2', 10, 'number of samples in layer 2')
+flags.DEFINE_integer('samples_1', 15, 'number of samples in layer 1')
+flags.DEFINE_integer('samples_2', 5, 'number of samples in layer 2')
 flags.DEFINE_integer('samples_3', 0, 'number of users samples in layer 3. (Only for mean model)')
 flags.DEFINE_integer('dim_1', 128, 'Size of output dim (final is 2x this, if using concat)')
 flags.DEFINE_integer('dim_2', 128, 'Size of output dim (final is 2x this, if using concat)')
 flags.DEFINE_boolean('random_context', True, 'Whether to use random context or direct edges')
-flags.DEFINE_integer('batch_size', 512, 'minibatch size.')
+flags.DEFINE_integer('batch_size', 256, 'minibatch size.')
 flags.DEFINE_boolean('sigmoid', False, 'whether to use sigmoid loss')
 flags.DEFINE_integer('identity_dim', 0, 'Set to positive value to use identity embedding features of that dimension. Default 0.')
 
@@ -430,6 +430,7 @@ def train(train_data, test_data=None):
 
 def main(argv=None):
     print("Loading training data..")
+
     train_data = load_data(FLAGS.train_prefix, remove_isolated_nodes=FLAGS.remove_isolated_nodes)
     print("Done loading training data..")
     train(train_data)
