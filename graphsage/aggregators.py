@@ -3,6 +3,90 @@ import tensorflow as tf
 from .layers import Layer, Dense
 from .inits import glorot, zeros
 
+class AttnAggregator(Layer): 
+    def __init__(self, input_dim, output_dim, num_heads=4, neigh_input_dim=None,
+        dropout=0.,bias=False, act=tf.nn.relu,
+        name=None, concat=False, **kwargs):
+        super(AttnAggregator, self).__init__(**kwargs) 
+        
+        self.dropout = dropout
+        self.bias = bias
+        self.act = act
+        self.concat = concat
+
+        if neigh_input_dim is None:
+            neigh_input_dim = input_dim
+
+        # if name is not None:
+        #     name = '/' + name
+        # else:
+        #     name = ''
+
+        # init = tf.initializers.GlorotUniform()
+        # self.vars_neigh_weights = tf.Variable(init(shape=[neigh_input_dim, output_dim]),
+        #                                         trainable=True, name=f'{name}/neigh_weights')
+        # self.vars_self_weights = tf.Variable(init(shape=[input_dim, output_dim]),
+        #                                         trainable=True, name=f'{name}/self_weights')
+        # if self.bias:
+        #     self.vars_bias = tf.Variable(tf.initializers.zeros()(shape=[self.output_dim]), name=f'{name}/bias')
+
+        # if self.logging:
+        #     self._log_vars()
+
+        self.input_dim = input_dim
+        self.output_dim = output_dim # previously d_model: the num of units before spliting
+        self.num_heads = num_heads
+        assert output_dim % self.num_heads == 0
+
+        self.depth = output_dim//self.num_heads
+        self.d = tf.keras.layers.Dense(output_dim)
+        self.wk = tf.keras.layers.Dense(output_dim)
+        self.wq = tf.keras.layers.Dense(output_dim)
+        self.wv = tf.keras.layers.Dense(output_dim)
+
+    def split_heads(self, x, batch_size):
+        x = tf.reshape(x,(batch_size,-1,self.num_heads,self.depth))
+        return tf.transpose(x,perm=[0,2,1,3]) # (batch_size,num_heads,seq_length,depth)
+
+    def pad_mask(self,feat):
+        # check weather all the feat of certain neighbr are zeros
+        tmp = tf.cast(tf.math.equal(tf.math.count_nonzero(feat,-1,keepdims=True),0),tf.float32)
+        res = tf.transpose(tmp, perm=[0,1,3,2])
+        return res
+
+    def _call(self, inputs):
+        q, k = inputs
+        v = k # they are the neigh feat
+        batch_size = tf.shape(q)[0]
+        q = self.wq(q) # (batch size, unit)
+        k = self.wk(k) # (batch size, neighbor size, unit)
+        v = self.wv(v) # (batch size, neighbor size, unit)
+        q = q[:,tf.newaxis,:]
+
+        Q = self.split_heads(q,batch_size)
+        K = self.split_heads(k,batch_size)
+        V = self.split_heads(v,batch_size)
+
+        matmul_qk = tf.matmul(Q,K,transpose_b=True)
+        dk = tf.cast(tf.shape(K)[-1],tf.float32)
+        scaled_qk = matmul_qk/tf.math.sqrt(dk)
+        mask = self.pad_mask(K)
+        scaled_qk += mask*-1e9 
+
+        attention_weight = tf.nn.softmax(scaled_qk,axis=-1) # (batch size, num_heads, seq_length, seq_length)
+        attention = tf.matmul(attention_weight,V) # (batch size, num_heads, seq_length, depth)
+        attention = tf.transpose(attention, perm=[0,2,1,3])
+        attention_concat = tf.reshape(attention,(-1,self.output_dim))
+
+        if not self.concat:
+            res = tf.add_n([tf.reshape(q,(-1,self.output_dim)),attention_concat])
+        else:
+            res = tf.concat([tf.reshape(q,(-1,self.output_dim)),attention_concat], axis=1)
+
+        # res = tf.reshape(attention_concat,(-1,self.output_dim))
+        return self.d(res) # (seq_length, output_dim)
+
+
 class MeanAggregator(Layer):
     """
     Aggregates via mean followed by matmul and non-linearity.
