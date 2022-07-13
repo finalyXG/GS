@@ -2,7 +2,7 @@ import tensorflow as tf
 
 import graphsage.models as models
 import graphsage.layers as layers
-from graphsage.aggregators import MeanAggregator, MaxPoolingAggregator, MeanPoolingAggregator, SeqAggregator, GCNAggregator
+from graphsage.aggregators import AttnAggregator, MeanAggregator, MaxPoolingAggregator, MeanPoolingAggregator, SeqAggregator, GCNAggregator
 
 flags = tf.compat.v1.flags
 FLAGS = flags.FLAGS
@@ -41,6 +41,8 @@ class SupervisedGraphsage(models.SampleAndAggregate):
             self.aggregator_cls = MaxPoolingAggregator
         elif aggregator_type == "gcn":
             self.aggregator_cls = GCNAggregator
+        elif aggregator_type == 'attn':
+            self.aggregator_cls = AttnAggregator
         else:
             raise Exception("Unknown aggregator: ", self.aggregator_cls)
 
@@ -79,7 +81,6 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         batch_build = 1
         samples1, support_sizes1 = self.sample(self.inputs1, self.layer_infos, batch_build)
         num_samples = [layer_info.num_samples for layer_info in self.layer_infos]
-        
         self.outputs1, self.aggregators = self.aggregate(samples1, [self.features], self.dims, num_samples,
                 support_sizes1, batch_build, name='agg', concat=self.concat, model_size=self.model_size)
         dim_mult = 2 if self.concat else 1
