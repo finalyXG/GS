@@ -302,6 +302,7 @@ class SampleAndAggregate(GeneralizedModel):
         # length: number of layers + 1
         hidden = [tf.nn.embedding_lookup(params=input_features, ids=node_samples) for node_samples in samples]
         new_agg = aggregators is None
+        attn_w_hop_layer_hop = {}
         if new_agg:
             aggregators = []
         for layer in range(len(num_samples)):
@@ -329,11 +330,21 @@ class SampleAndAggregate(GeneralizedModel):
                             #   num_samples[len(num_samples) - hop - 1], 
                               num_samples[hop],
                               dim_mult*dims[layer]]
-                h = aggregator((hidden[hop],
-                                tf.reshape(hidden[hop + 1], neigh_dims)))
+                if type(aggregator).__name__ == 'AttnAggregator':
+                    h, attn_w = aggregator((hidden[hop],
+                                    tf.reshape(hidden[hop + 1], neigh_dims)))
+                    attn_w_hop_layer_hop.setdefault(layer, {}).setdefault(hop, attn_w)
+                else:
+                    h = aggregator((hidden[hop],
+                                    tf.reshape(hidden[hop + 1], neigh_dims)))
                 next_hidden.append(h)
             hidden = next_hidden
-        return hidden[0], aggregators
+
+        
+        if len(attn_w_hop_layer_hop.keys()) > 0:
+            return hidden[0], aggregators, attn_w_hop_layer_hop
+        else:
+            return hidden[0], aggregators
 
     def _build(self):
         labels = tf.reshape(
