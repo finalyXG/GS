@@ -115,23 +115,24 @@ def get_df_gs_info(train_data, FLAGS, NodeMinibatchIterator, model, nb_iter=1):
 
     
     df_val_gs_info = pd.DataFrame()
-    if len(minibatch_it.val_nodes) > 0:
-        for i in tqdm.tqdm(range(nb_iter), desc="Generating val info:"):
-            feed_dict_val, labels_val = minibatch_it.node_val_feed_dict(test=False)
-            outs_val = model.test_one_step(feed_dict_val, return_node_feat=True)
-            df_val_gs_info = pd.DataFrame({
-                # 'id': feed_dict_val['batch'].numpy().tolist(), # Laurence 20220706
-                'id': [idx2id[n] for n in feed_dict_val['batch'].numpy().tolist()],
-                'graph_feat':outs_val[-1].numpy().tolist(), 
-                'graph_pred':outs_val[0].numpy().tolist(),
-                'label': labels_val[:,1].tolist()}).assign(is_train=False)
+    # Laurence 20220715: Disable validation dataframe
+    # if len(minibatch_it.val_nodes) > 0:
+    #     for i in tqdm.tqdm(range(nb_iter), desc="Generating val info:"):
+    #         feed_dict_val, labels_val = minibatch_it.node_val_feed_dict(test=False)
+    #         outs_val = model.test_one_step(feed_dict_val, return_node_feat=True)
+    #         df_val_gs_info = pd.DataFrame({
+    #             # 'id': feed_dict_val['batch'].numpy().tolist(), # Laurence 20220706
+    #             'id': [idx2id[n] for n in feed_dict_val['batch'].numpy().tolist()],
+    #             'graph_feat':outs_val[-1].numpy().tolist(), 
+    #             'graph_pred':outs_val[0].numpy().tolist(),
+    #             'label': labels_val[:,1].tolist()}).assign(is_train=False)
 
-            df_val_gs_info_ls.append(df_val_gs_info)
-        graph_feat_agg = np.mean(np.stack([np.stack(df['graph_feat'].values) for df in df_val_gs_info_ls]), axis=0).tolist()
-        graph_pred_raw = np.stack([np.stack(df['graph_pred'].values) for df in df_val_gs_info_ls])
-        graph_pred_raw = np.transpose(graph_pred_raw, (1,0,2)).tolist()
-        df_val_gs_info = df_val_gs_info.assign(**{f'graph_feat_agg_{nb_iter}': graph_feat_agg})
-        df_val_gs_info = df_val_gs_info.assign(**{f'graph_pred_raw_{nb_iter}': graph_pred_raw})
+    #         df_val_gs_info_ls.append(df_val_gs_info)
+    #     graph_feat_agg = np.mean(np.stack([np.stack(df['graph_feat'].values) for df in df_val_gs_info_ls]), axis=0).tolist()
+    #     graph_pred_raw = np.stack([np.stack(df['graph_pred'].values) for df in df_val_gs_info_ls])
+    #     graph_pred_raw = np.transpose(graph_pred_raw, (1,0,2)).tolist()
+    #     df_val_gs_info = df_val_gs_info.assign(**{f'graph_feat_agg_{nb_iter}': graph_feat_agg})
+    #     df_val_gs_info = df_val_gs_info.assign(**{f'graph_pred_raw_{nb_iter}': graph_pred_raw})
 
     
     # Set current adj matrix for testing >>>
