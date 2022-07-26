@@ -65,12 +65,13 @@ def get_df_gs_info(train_data, FLAGS, NodeMinibatchIterator, model, nb_iter=1):
         node_feat_ls = []
         node_id_ls = []
         node_neigh_id_ls_dict = {}
+        attn_w_ls_dict = {}
         while not minibatch_it.end():
             feed_dict, labels = minibatch_it.next_minibatch_feed_dict()
-            outs = model.test_one_step(feed_dict, return_node_feat=True, return_sampled_nodes=True)
+            outs = model.test_one_step(feed_dict, return_node_feat=True, return_sampled_nodes=True, return_others=True)
             pred_ls += outs[0].numpy().tolist()
             labels_ls += labels[:,1].tolist()
-            feat_ls += outs[-1].numpy().tolist()
+            feat_ls += outs[3].numpy().tolist()
             node_id_ls += feed_dict['batch'].numpy().tolist()
             # Laurence 20220713
             samples_idx = outs[2][0]
@@ -88,6 +89,26 @@ def get_df_gs_info(train_data, FLAGS, NodeMinibatchIterator, model, nb_iter=1):
                 node_neigh_id_ls_dict[hop] += node_id_tr.numpy().tolist()
                 hop += 1
 
+            # Laurence 20220715: add attention
+            attn_w = outs[4]['attn_w']
+            attn_w_reshape = {}
+            bs = outs[0].shape[0]
+            for k,attn_by_layer in attn_w.items():
+                agg_name = f'attn_agg_{k}'
+                acc_mul = 1
+                front_shape = []
+                attn_w_reshape[agg_name] = {}
+                for hop, attn_by_hop in attn_by_layer.items():
+                    hop_name = f'hop_{hop}'
+                    divide = attn_by_hop.shape[0] // acc_mul
+                    acc_mul *= divide
+                    front_shape.append(divide)
+                    new_shape = front_shape + attn_by_hop.shape[1:]
+                    attn_w_reshape[agg_name][hop_name] = tf.reshape(attn_by_hop, new_shape).numpy().tolist()
+                    col_name = f'{agg_name}_{hop_name}'
+                    attn_w_ls_dict.setdefault(col_name, [])
+                    attn_w_ls_dict[col_name] += attn_w_reshape[agg_name][hop_name] 
+                    # print(front_shape, acc_mul, new_shape)
 
 
         node_feat_ls = [minibatch_it.G.nodes[n]['feat'] for n in node_id_ls]
@@ -104,6 +125,11 @@ def get_df_gs_info(train_data, FLAGS, NodeMinibatchIterator, model, nb_iter=1):
         # Laurence 20220713
         for k, v in node_neigh_id_ls_dict.items():
             df_tr_gs_info = df_tr_gs_info.assign(**{f'neigh_{k}': v})
+
+        # Laurence 20220715
+        for k, v in attn_w_ls_dict.items():
+            df_tr_gs_info = df_tr_gs_info.assign(**{k: v})
+
 
 
         df_tr_gs_info_ls.append(df_tr_gs_info)
@@ -141,7 +167,7 @@ def get_df_gs_info(train_data, FLAGS, NodeMinibatchIterator, model, nb_iter=1):
     # Set current adj matrix for testing <<<
     for i in tqdm.tqdm(range(nb_iter), desc="Generating test info:"):
         feed_dict_te, labels_te = minibatch_it.node_val_feed_dict(test=True)
-        outs_te = model.test_one_step(feed_dict_te, return_node_feat=True, return_sampled_nodes=True )
+        outs_te = model.test_one_step(feed_dict_te, return_node_feat=True, return_sampled_nodes=True, return_others=True)
 
         # Laurence 20220706
         node_id_ls = [idx2id[n] for n in feed_dict_te['batch'].numpy().tolist()]
@@ -165,10 +191,32 @@ def get_df_gs_info(train_data, FLAGS, NodeMinibatchIterator, model, nb_iter=1):
             node_neigh_id_ls_dict[hop] += node_id_tr.numpy().tolist()
             hop += 1
 
+        attn_w_ls_dict = {}
+        # Laurence 20220715: add attention
+        attn_w = outs_te[4]['attn_w']
+        attn_w_reshape = {}
+        bs = outs_te[0].shape[0]
+        for k,attn_by_layer in attn_w.items():
+            agg_name = f'attn_agg_{k}'
+            acc_mul = 1
+            front_shape = []
+            attn_w_reshape[agg_name] = {}
+            for hop, attn_by_hop in attn_by_layer.items():
+                hop_name = f'hop_{hop}'
+                divide = attn_by_hop.shape[0] // acc_mul
+                acc_mul *= divide
+                front_shape.append(divide)
+                new_shape = front_shape + attn_by_hop.shape[1:]
+                attn_w_reshape[agg_name][hop_name] = tf.reshape(attn_by_hop, new_shape).numpy().tolist()
+                col_name = f'{agg_name}_{hop_name}'
+                attn_w_ls_dict.setdefault(col_name, [])
+                attn_w_ls_dict[col_name] += attn_w_reshape[agg_name][hop_name] 
+                # print(front_shape, acc_mul, new_shape)
+
         df_te_gs_info = pd.DataFrame({
             # 'id': feed_dict_te['batch'].numpy().tolist(), # Laurence 20220706
             'id': [n for n in node_id_ls],
-            'graph_feat':outs_te[-1].numpy().tolist(),
+            'graph_feat':outs_te[3].numpy().tolist(),
             'graph_pred':outs_te[0].numpy().tolist(),
             'node_feat': node_feat_ls,
             'node_feat_check_sum': node_feat_cs_ls,
@@ -177,6 +225,11 @@ def get_df_gs_info(train_data, FLAGS, NodeMinibatchIterator, model, nb_iter=1):
         # Laurence 20220713
         for k, v in node_neigh_id_ls_dict.items():
             df_te_gs_info = df_te_gs_info.assign(**{f'neigh_{k}': v})
+
+        # Laurence 20220715
+        for k, v in attn_w_ls_dict.items():
+            df_te_gs_info = df_te_gs_info.assign(**{k: v})
+            
         
         df_te_gs_info_ls.append(df_te_gs_info)
     graph_feat_agg = np.mean(np.stack([np.stack(df['graph_feat'].values) for df in df_te_gs_info_ls]), axis=0).tolist()
@@ -184,7 +237,6 @@ def get_df_gs_info(train_data, FLAGS, NodeMinibatchIterator, model, nb_iter=1):
     graph_pred_raw = np.transpose(graph_pred_raw, (1,0,2)).tolist()
     df_te_gs_info = df_te_gs_info.assign(**{f'graph_feat_agg_{nb_iter}': graph_feat_agg})
     df_te_gs_info = df_te_gs_info.assign(**{f'graph_pred_raw_{nb_iter}': graph_pred_raw})
-
 
 
     df_gs_info = pd.concat([
