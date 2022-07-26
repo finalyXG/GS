@@ -81,8 +81,11 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         batch_build = 1
         samples1, support_sizes1 = self.sample(self.inputs1, self.layer_infos, batch_build)
         num_samples = [layer_info.num_samples for layer_info in self.layer_infos]
-        self.outputs1, self.aggregators = self.aggregate(samples1, [self.features], self.dims, num_samples,
-                support_sizes1, batch_build, name='agg', concat=self.concat, model_size=self.model_size)
+        if FLAGS.model == 'graphsage_attn':
+            self.outputs1, self.aggregators, _ = self.aggregate(samples1, [self.features], self.dims, num_samples, support_sizes1, batch_build, name='agg', concat=self.concat, model_size=self.model_size)
+        else:
+            self.outputs1, self.aggregators = self.aggregate(samples1, [self.features], self.dims, num_samples, support_sizes1, batch_build, name='agg', concat=self.concat, model_size=self.model_size)
+
         dim_mult = 2 if self.concat else 1
 
         self.outputs1 = tf.nn.l2_normalize(self.outputs1, 1)
