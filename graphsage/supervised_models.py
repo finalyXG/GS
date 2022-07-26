@@ -157,7 +157,11 @@ class SupervisedGraphsage(models.SampleAndAggregate):
             samples1, support_sizes1 = self.sample(feed_dict['batch'], self.layer_infos, feed_dict['batch_size'])
             num_samples = [layer_info.num_samples for layer_info in self.layer_infos]
 
-            outputs1, _ = self.aggregate(samples1, [self.features], self.dims, num_samples,
+            if FLAGS.model == 'graphsage_attn':
+                outputs1, _, _ = self.aggregate(samples1, [self.features], self.dims, num_samples,
+                    support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size)
+            else:
+                outputs1, _ = self.aggregate(samples1, [self.features], self.dims, num_samples,
                     support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size)
 
             dim_mult = 2 if self.concat else 1
