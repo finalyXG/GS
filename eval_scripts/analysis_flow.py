@@ -14,7 +14,7 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 # tf.get_logger().setLevel('INFO')
 tf.get_logger().setLevel(logging.ERROR)
 
-PROJ_PATH = '/mnt/c/Users/Suvi Liu/Documents/project/NWA_AI'
+PROJ_PATH = '/mnt/c/Users/Suvi Liu/Documents/project/NWA_AI/'
 if PROJ_PATH not in sys.path:
     sys.path.append(PROJ_PATH)
 
@@ -59,8 +59,7 @@ exp_config = {
         # 'model_path': "/mnt/c/Users/Laurence_Liu/Documents/Regtics_proj/NWA_AI/sup-example_data/graphsage_mean_small_0.0010_22-06-2022-22:16:31/weights.049-sb@0-77f1_mic-0.922-f1_mac-0.922",
         # 'model_path': "/mnt/c/Users/Laurence_Liu/Documents/Regtics_proj/NWA_AI/sup-example_data/graphsage_mean_small_0.0010_20-05-2022-10:34:09/weights.003-sb@0-22f1_mic-0.969-f1_mac-0.706",
         # 'model_path': "/mnt/c/Users/Laurence_Liu/Documents/Regtics_proj/NWA_AI/sup-example_data/graphsage_mean_small_0.0010_30-06-2022-01:36:55/weights.120-sb@0-56f1_mic-0.949-f1_mac-0.949",
-        # 'model_path': "/mnt/c/Users/Laurence_Liu/Documents/Regtics_proj/NWA_AI/sup-example_data/graphsage_mean_small_0.0010_05-07-2022-23:42:12/weights.086-sb@0-57f1_mic-0.000-f1_mac-0.000",
-        'model_path':'/mnt/c/Users/Suvi Liu/Documents/project/NWA_AI/sup-example_data/graphsage_attn_small_0.0010_13-07-2022-10:14:53/weights.122-sb@0-58f1_mic-0.000-f1_mac-0.000',
+        'model_path': "/mnt/c/Users/Suvi Liu/Documents/project/NWA_AI/sup-example_data/graphsage_attn_small_0.0010_13-07-2022-18:17:07/weights.121-sb@0-58f1_mic-0.000-f1_mac-0.000",
         'PROJ_PATH' : PROJ_PATH,
         'yyyymmdd_HHMM': datetime.today().strftime('%Y%m%d_%H%M'),
         'NB_ITER': 3,
@@ -112,9 +111,10 @@ exp_config = {
         'set_df_combine_info': lambda : (
             graph_feat_agg_name := f"graph_feat_agg_{exp_config['global']['NB_ITER']}",
             graph_pred_raw_name := f"graph_pred_raw_{exp_config['global']['NB_ITER']}",
+            neigh_cols := [c for c in exp_config['global']['df_gs_info'].columns if 'neigh_' in c],
             df_combine_info := pd.merge(
                 left=exp_config['global']['df_G_data'],
-                right=exp_config['global']['df_gs_info'][['id','graph_feat','graph_pred','node_feat_check_sum',graph_feat_agg_name,graph_pred_raw_name]],
+                right=exp_config['global']['df_gs_info'][['id','graph_feat','graph_pred','node_feat_check_sum',graph_feat_agg_name,graph_pred_raw_name] + neigh_cols],
                 on=['id','node_feat_check_sum'], how='left'),
 
             # df_combine_info := pd.merge(
