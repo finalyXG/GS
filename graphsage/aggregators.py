@@ -89,7 +89,7 @@ class AttnAggregator(Layer):
             res = tf.concat([tf.reshape(q,(-1,self.output_dim)),attention_concat], axis=1)
 
         # res = tf.reshape(attention_concat,(-1,self.output_dim))
-        return self.d(res) # (seq_length, output_dim)
+        return self.d(res), weight_ # (seq_length, output_dim)
 
 
 class MeanAggregator(Layer):

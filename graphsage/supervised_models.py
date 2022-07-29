@@ -81,8 +81,11 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         batch_build = 1
         samples1, support_sizes1 = self.sample(self.inputs1, self.layer_infos, batch_build)
         num_samples = [layer_info.num_samples for layer_info in self.layer_infos]
-        self.outputs1, self.aggregators = self.aggregate(samples1, [self.features], self.dims, num_samples,
-                support_sizes1, batch_build, name='agg', concat=self.concat, model_size=self.model_size)
+        if FLAGS.model == 'graphsage_attn':
+            self.outputs1, self.aggregators, _ = self.aggregate(samples1, [self.features], self.dims, num_samples, support_sizes1, batch_build, name='agg', concat=self.concat, model_size=self.model_size)
+        else:
+            self.outputs1, self.aggregators = self.aggregate(samples1, [self.features], self.dims, num_samples, support_sizes1, batch_build, name='agg', concat=self.concat, model_size=self.model_size)
+
         dim_mult = 2 if self.concat else 1
 
         self.outputs1 = tf.nn.l2_normalize(self.outputs1, 1)
@@ -154,7 +157,11 @@ class SupervisedGraphsage(models.SampleAndAggregate):
             samples1, support_sizes1 = self.sample(feed_dict['batch'], self.layer_infos, feed_dict['batch_size'])
             num_samples = [layer_info.num_samples for layer_info in self.layer_infos]
 
-            outputs1, _ = self.aggregate(samples1, [self.features], self.dims, num_samples,
+            if FLAGS.model == 'graphsage_attn':
+                outputs1, _, _ = self.aggregate(samples1, [self.features], self.dims, num_samples,
+                    support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size)
+            else:
+                outputs1, _ = self.aggregate(samples1, [self.features], self.dims, num_samples,
                     support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size)
 
             dim_mult = 2 if self.concat else 1
@@ -171,7 +178,7 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         return preds, loss
 
     #Laurence 20220407
-    def test_one_step(self, feed_dict, return_sampled_nodes=False, return_node_feat=False):
+    def test_one_step(self, feed_dict, return_sampled_nodes=False, return_node_feat=False, return_others=False):
         if 'sample' in feed_dict.keys() and 'support_sizes' in feed_dict.keys():
             samples1 = feed_dict['sample']
             support_sizes1 = feed_dict['support_sizes']
@@ -180,8 +187,13 @@ class SupervisedGraphsage(models.SampleAndAggregate):
             # samples2, support_sizes2 = self.sample(feed_dict['batch'], self.layer_infos, feed_dict['batch_size'])
         num_samples = [layer_info.num_samples for layer_info in self.layer_infos]
 
-        outputs1, _ = self.aggregate(samples1, [self.features], self.dims, num_samples,
-                support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size)
+        if FLAGS.model == 'graphsage_attn':
+            outputs1, _, attn_w = self.aggregate(samples1, [self.features], self.dims, num_samples,
+                    support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size)
+        else:
+            outputs1, _ = self.aggregate(samples1, [self.features], self.dims, num_samples,
+                    support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size)
+
 
         dim_mult = 2 if self.concat else 1
         # node_pred = layers.Dense(dim_mult*self.dims[-1], self.num_classes, 
@@ -191,12 +203,18 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         node_preds = self.node_pred(outputs1)
         preds = self.predict_input(node_preds)
         loss = self._loss(node_preds, feed_dict['labels'], is_return=True)
+        others = {}
+
+        if FLAGS.model == 'graphsage_attn':
+             others['attn_w'] = attn_w
 
         rs = [preds, loss]
         if return_sampled_nodes:
             rs.append((samples1, support_sizes1))
         if return_node_feat:
             rs.append(outputs1)
+        if len(others) > 0 and return_others==True:
+            rs.append(others)
         return rs
 
         # if return_sampled_nodes:

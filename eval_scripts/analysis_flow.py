@@ -50,10 +50,8 @@ def lassert(args):
 
 exp_config = {
     'global': {
-        # 'train_prefix': "../example_data/data_2022-06-29_2322",
-        # 'train_prefix': "../example_data/data_2022-06-01_0956",
-        # 'train_prefix': "../example_data/livi-test-data-20220511",
-        'gs_train_prefix': "../example_data/aaa",
+        # 'gs_train_prefix': "../example_data/aaa",  # 🚩
+        'gs_train_prefix': "../example_data/data_2022-06-29_2322-trim",
         # 'gs_train_prefix': "../example_data/data_2022-06-01_0956",
         # 'gs_train_prefix': "../example_data/livi-test-data-20220511",
         # 'model_path': "/mnt/c/Users/Laurence_Liu/Documents/Regtics_proj/NWA_AI/sup-example_data/graphsage_mean_small_0.0010_22-06-2022-22:16:31/weights.049-sb@0-77f1_mic-0.922-f1_mac-0.922",
@@ -66,6 +64,7 @@ exp_config = {
         'set_FLAGS': lambda : (
             FLAGS.mark_as_parsed(),
             setattr(FLAGS, 'train_prefix', exp_config['global']['gs_train_prefix']),
+            setattr(FLAGS, 'model', 'graphsage_attn'),
             setattr(FLAGS, 'sigmoid', False),
             setattr(FLAGS, 'train_return_model_once_ready', True),
         ),
@@ -112,9 +111,10 @@ exp_config = {
             graph_feat_agg_name := f"graph_feat_agg_{exp_config['global']['NB_ITER']}",
             graph_pred_raw_name := f"graph_pred_raw_{exp_config['global']['NB_ITER']}",
             neigh_cols := [c for c in exp_config['global']['df_gs_info'].columns if 'neigh_' in c],
+            attn_cols := [c for c in exp_config['global']['df_gs_info'].columns if 'attn_' in c],
             df_combine_info := pd.merge(
                 left=exp_config['global']['df_G_data'],
-                right=exp_config['global']['df_gs_info'][['id','graph_feat','graph_pred','node_feat_check_sum',graph_feat_agg_name,graph_pred_raw_name] + neigh_cols],
+                right=exp_config['global']['df_gs_info'][['id','graph_feat','graph_pred','node_feat_check_sum',graph_feat_agg_name,graph_pred_raw_name] + neigh_cols + attn_cols],
                 on=['id','node_feat_check_sum'], how='left'),
 
             # df_combine_info := pd.merge(
@@ -247,16 +247,16 @@ exp_config = {
         ],
         # Note: the load_and_check_model_wegiths should place on top as it has "in-place" effect.
         'run_exp_ls' : [
-            # 'load_and_check_model_weights',
-            # 'one_LR_w_feat_on_all', 
-            # 'one_LR_w_feat_on_can_graph',
-            # 'one_LR_w_feat_on_can_not_graph',
-            # 'one_LR_w_graph_feat_on_can_graph',
-            # 'one_LR_w_all_feat_on_all',
-            # 'one_LR_w_all_feat_on_can_graph',
-            # 'one_LR_w_all_feat_on_can_not_graph',
-            # 'one_LR_w_graph_agg_feat_on_can_graph',
-            # 'one_LR_w_all_FAGFA_on_all'
+            'load_and_check_model_weights',
+            'one_LR_w_feat_on_all', 
+            'one_LR_w_feat_on_can_graph',
+            'one_LR_w_feat_on_can_not_graph',
+            'one_LR_w_graph_feat_on_can_graph',
+            'one_LR_w_all_feat_on_all',
+            'one_LR_w_all_feat_on_can_graph',
+            'one_LR_w_all_feat_on_can_not_graph',
+            'one_LR_w_graph_agg_feat_on_can_graph',
+            'one_LR_w_all_FAGFA_on_all'
         ],
         
     },
