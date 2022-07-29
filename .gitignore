@@ -119,3 +119,4 @@ notebook/neo4j_explore_G.ipynb
 notebook/
 staging/
 graphsage/.vscode.json
+nwa_*.sh
