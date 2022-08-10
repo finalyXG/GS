@@ -14,9 +14,7 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 # tf.get_logger().setLevel('INFO')
 tf.get_logger().setLevel(logging.ERROR)
 
-PROJ_PATH = '/mnt/c/Users/Laurence_Liu/Documents/Regtics_proj/NWA_AI'
-# PROJ_PATH = '/mnt/c/Users/Suvi Liu/Documents/project/NWA_AI' # 🚩
-
+PROJ_PATH = '/mnt/c/Users/Suvi Liu/Documents/project/NWA_AI/'
 if PROJ_PATH not in sys.path:
     sys.path.append(PROJ_PATH)
 
