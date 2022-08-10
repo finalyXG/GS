@@ -104,7 +104,7 @@ def load_data(prefix, normalize=True, load_walks=False, remove_isolated_nodes=Fa
         #     G.remove_nodes_from(fake_ls)
 
         # 🚩 Laurence 20220728 Improved filter >>>
-        if len(fake_ls) > 0 and len(fake_ls) / len(cc) < 0.1 or len(fake_ls) / len(cc) > 0.9:
+        elif len(fake_ls) > 0 and len(fake_ls) / len(cc) < 0.1 or len(fake_ls) / len(cc) > 0.9:
             subg_cc_real_nodes = [n for n in cc if G.nodes[n]['real']==True]
             highest_degree_node = sorted([(n,G.degree(n)) for n in subg_cc_real_nodes], key=lambda x: x[1], reverse=True )[0][0]
             path_ls = []
