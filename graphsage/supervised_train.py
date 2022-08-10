@@ -69,6 +69,10 @@ flags.DEFINE_boolean('remove_isolated_nodes', True, 'whether to remove nodes wit
 flags.DEFINE_list('k_of_sb', [0,2,4,8], 'The value of k of sb@k')
 flags.DEFINE_boolean('train_return_model_once_ready', False, 'Whether to return model without training in train()')
 
+# For analysis flow
+# Laurence 20220809
+flags.DEFINE_string('save_to_folder_by_date', '', 'Date value yyyymmdd_HHMM as saved folder name')
+
 
 datetime_now = datetime.now().strftime("%d-%m-%Y-%H:%M:%S")
 # os.environ["CUDA_VISIBLE_DEVICES"]=str(FLAGS.gpu)
@@ -254,8 +258,8 @@ def train(train_data, test_data=None):
     elif FLAGS.model == 'graphsage_attn':
         # Create model
         sampler = UniformNeighborSampler(adj_info)
-        layer_infos = [SAGEInfo("node", sampler, FLAGS.samples_1, 2*FLAGS.dim_1),
-                            SAGEInfo("node", sampler, FLAGS.samples_2, 2*FLAGS.dim_2)]
+        layer_infos = [SAGEInfo("node", sampler, FLAGS.samples_1, FLAGS.dim_1),
+                            SAGEInfo("node", sampler, FLAGS.samples_2, FLAGS.dim_2)]
 
         model = SupervisedGraphsage(num_classes, placeholders, 
                                      features,

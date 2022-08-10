@@ -120,3 +120,5 @@ notebook/
 staging/
 graphsage/.vscode.json
 nwa_*.sh
+prototype_tree
+prototype_tree_old
