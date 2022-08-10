@@ -25,6 +25,8 @@ from eval_scripts import check_node_feat, post_graphsage_trained
 from graphsage.minibatch import NodeMinibatchIterator
 from networkx.readwrite import json_graph
 
+flags = tf.compat.v1.flags
+
 log = logging.getLogger('nwa.final.analysis.com')
 # sys.stdout = StreamToLogger(log,logging.INFO)
 # sys.stderr = StreamToLogger(log,logging.ERROR)
@@ -56,8 +58,7 @@ exp_config = {
         'gs_train_prefix': "../example_data/data_2022-06-29_2322-trim",
         # 'gs_train_prefix': "../example_data/data_2022-06-01_0956",
         # 'gs_train_prefix': "../example_data/livi-test-data-20220511",
-        # 'model_path':'/mnt/c/Users/Suvi Liu/Documents/project/NWA_AI/sup-example_data/graphsage_attn_small_0.0010_13-07-2022-10:14:53/weights.122-sb@0-58f1_mic-0.000-f1_mac-0.000',  # 🚩
-        'model_path': "/mnt/c/Users/Laurence_Liu/Documents/Regtics_proj/NWA_AI/sup-example_data/graphsage_attn_small_0.0010_28-07-2022-12:54:31/weights.054-sb@0-59f1_mic-0.000-f1_mac-0.000",
+        'model_path': "/mnt/c/Users/Laurence_Liu/Documents/Regtics_proj/NWA_AI/sup-example_data/graphsage_attn_small_0.0010_09-08-2022-15:50:35/weights.125-sb@0-57f1_mic-0.000-f1_mac-0.000",
         'PROJ_PATH' : PROJ_PATH,
         'yyyymmdd_HHMM': datetime.today().strftime('%Y%m%d_%H%M'),
         'NB_ITER': 3,
@@ -359,12 +360,9 @@ exp_config = {
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Analysis Flow.')
-    parser.add_argument('--save_to_folder_by_date', type=str, help='Date value yyyymmdd_HHMM as saved folder name', default=None)
-
-    args = parser.parse_args()
-    if args.save_to_folder_by_date:
-        exp_config['global']['yyyymmdd_HHMM'] = args.save_to_folder_by_date
+    FLAGS = flags.FLAGS
+    if FLAGS.save_to_folder_by_date:
+        exp_config['global']['yyyymmdd_HHMM'] = FLAGS.save_to_folder_by_date
 
     for e in exp_config['global']['run_step_ls']:
         exp_config['global'][e]()
