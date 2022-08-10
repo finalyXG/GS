@@ -79,28 +79,14 @@ class AttnAggregator(Layer):
         K = self.split_heads(k,batch_size)
         V = self.split_heads(v,batch_size)
 
-        # matmul_qk = tf.matmul(Q,K,transpose_b=True)
-        # dk = tf.cast(tf.shape(K)[-1],tf.float32)
-        # scaled_qk = matmul_qk/tf.math.sqrt(dk)
-        # mask = self.pad_mask(K)
-        # scaled_qk += mask*-1e9 
-
-        # attention_weight = tf.nn.softmax(scaled_qk,axis=-1) # (batch size, num_heads, seq_length, seq_length)
-        # attention = tf.matmul(attention_weight,V) # (batch size, num_heads, seq_length, depth)
         attention, weight = self.scaled_dot_product_attention(Q,K,V)
         attention = tf.transpose(attention, perm=[0,2,1,3]) # (batch size, seq_length, num_heads, depth)
-        attention_concat = tf.reshape(attention,(batch_size,-1,self.output_dim))
-
-        # a new node feat incooperated with the neighbors
-        q_ = tf.add_n([tf.reshape(q,(batch_size,-1,self.output_dim)),attention_concat])
-        Q_ = self.split_heads(q_,batch_size)
-        attention_, weight_ = self.scaled_dot_product_attention(Q_,K,V)
-        attention_concat_ = tf.reshape(attention_,(-1,self.output_dim))
+        attention_concat = tf.reshape(attention,(-1,self.output_dim))
 
         if not self.concat:
-            res = tf.add_n([tf.reshape(q_,(-1,self.output_dim)),attention_concat_])
+            res = tf.add_n([tf.reshape(q,(-1,self.output_dim)),attention_concat])
         else:
-            res = tf.concat([tf.reshape(q_,(-1,self.output_dim)),attention_concat_], axis=1)
+            res = tf.concat([tf.reshape(q,(-1,self.output_dim)),attention_concat], axis=1)
 
         # res = tf.reshape(attention_concat,(-1,self.output_dim))
         return self.d(res), weight_ # (seq_length, output_dim)
