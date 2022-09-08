@@ -206,7 +206,8 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         others = {}
 
         if FLAGS.model == 'graphsage_attn':
-             others['attn_w'] = attn_w
+            others['attn_w'] = {k: attn_w[k] for k in attn_w.keys() if type(k)==int}
+            others['feat'] = {int(k.split('_')[-1]): attn_w[k] for k in attn_w.keys() if 'feat_agg_' in str(k)}
 
         rs = [preds, loss]
         if return_sampled_nodes:
