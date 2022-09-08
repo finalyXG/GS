@@ -334,6 +334,7 @@ class SampleAndAggregate(GeneralizedModel):
                     h, attn_w = aggregator((hidden[hop],
                                     tf.reshape(hidden[hop + 1], neigh_dims)))
                     attn_w_hop_layer_hop.setdefault(layer, {}).setdefault(hop, attn_w)
+                    attn_w_hop_layer_hop.setdefault(f"feat_agg_{layer}", {}).setdefault(hop, h)
                 else:
                     h = aggregator((hidden[hop],
                                     tf.reshape(hidden[hop + 1], neigh_dims)))
