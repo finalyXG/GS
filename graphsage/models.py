@@ -301,6 +301,7 @@ class SampleAndAggregate(GeneralizedModel):
 
         # length: number of layers + 1
         hidden = [tf.nn.embedding_lookup(params=input_features, ids=node_samples) for node_samples in samples]
+        node_feat_ori = [tf.nn.embedding_lookup(params=input_features, ids=node_samples) for node_samples in samples[:1]]
         new_agg = aggregators is None
         attn_w_hop_layer_hop = {}
         if new_agg:
@@ -342,6 +343,7 @@ class SampleAndAggregate(GeneralizedModel):
             hidden = next_hidden
 
         
+        hidden = [tf.concat([node_feat_ori[0], hidden[0]], axis=-1)]
         if len(attn_w_hop_layer_hop.keys()) > 0:
             return hidden[0], aggregators, attn_w_hop_layer_hop
         else:

@@ -91,9 +91,11 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         self.outputs1 = tf.nn.l2_normalize(self.outputs1, 1)
 
         dim_mult = 2 if self.concat else 1
-        self.node_pred = layers.Dense(dim_mult*self.dims[-1], self.num_classes, 
-                dropout=self.placeholders['dropout'],
-                act=lambda x : x)
+        self.node_pred = layers.Dense(
+            dim_mult*self.dims[-1] + self.features.shape[1], 
+            self.num_classes, 
+            dropout=self.placeholders['dropout'],
+            act=lambda x : x)
         # TF graph management
         self.node_preds = self.node_pred(self.outputs1)
 
