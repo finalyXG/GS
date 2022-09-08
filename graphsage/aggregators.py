@@ -44,6 +44,7 @@ class AttnAggregator(Layer):
         self.wq = tf.keras.layers.Dense(output_dim)
         self.wv = tf.keras.layers.Dense(output_dim)
 
+        self.layer_norm = tf.keras.layers.LayerNormalization()
     def split_heads(self, x, batch_size):
         x = tf.reshape(x,(batch_size,-1,self.num_heads,self.depth))
         return tf.transpose(x,perm=[0,2,1,3]) # (batch_size,num_heads,seq_length,depth)
@@ -89,7 +90,7 @@ class AttnAggregator(Layer):
             res = tf.concat([tf.reshape(q,(-1,self.output_dim)),attention_concat], axis=1)
 
         # res = tf.reshape(attention_concat,(-1,self.output_dim))
-        return self.d(res), weight # (seq_length, output_dim)
+        return self.act(self.layer_norm(self.d(res))), weight # (seq_length, output_dim)
 
 
 class MeanAggregator(Layer):
