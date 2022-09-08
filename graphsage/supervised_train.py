@@ -87,6 +87,30 @@ def calc_f1(y_true, y_pred):
         y_pred = tf.where(y_pred > 0.5, 1, 0).numpy()
     return metrics.f1_score(y_true, y_pred, average="micro"), metrics.f1_score(y_true, y_pred, average="macro")
 
+def calc_precision_recall(y_true, y_pred):
+    if not FLAGS.sigmoid:
+        y_true = np.argmax(y_true, axis=1)
+        y_pred = np.argmax(y_pred, axis=1)
+    else:
+        y_pred = tf.where(y_pred > 0.5, 1, 0).numpy()
+    
+    return metrics.precision_score(y_true, y_pred), metrics.recall_score(y_true, y_pred), metrics.f1_score(y_true, y_pred)
+
+
+def calc_microavg_eval_measures(tp, fn, fp):
+    tp_sum = sum(tp.values()).item()
+    fn_sum = sum(fn.values()).item()
+    fp_sum = sum(fp.values()).item()
+
+    p = tp_sum*1.0 / (tp_sum+fp_sum)
+    r = tp_sum*1.0 / (tp_sum+fn_sum)
+    if (p+r)>0:
+        f1 = 2.0 * (p*r) / (p+r)
+    else:
+        f1 = 0
+    return p, r, f1    
+
+
 # Define model evaluation function
 def evaluate(model, minibatch_iter, epoch, size=None):
     t_test = time.time()
@@ -181,7 +205,8 @@ def incremental_evaluate(model, minibatch_iter, size, test=False):
     val_preds = np.vstack(val_preds)
     labels = np.vstack(labels)
     f1_scores = calc_f1(labels, val_preds)
-    return np.mean(val_losses), f1_scores[0], f1_scores[1], (time.time() - t_test)
+    precision, recall, f1 = calc_precision_recall(labels, val_preds)
+    return np.mean(val_losses), f1_scores[0], f1_scores[1], precision, recall, f1, (time.time() - t_test)
 
 def construct_placeholders(num_classes):
     # Define placeholders
@@ -355,9 +380,11 @@ def train(train_data, test_data=None):
     checkpoint_cb_ls =  []
     for k in FLAGS.k_of_sb:
         one_cb = tf.keras.callbacks.ModelCheckpoint(
-                    filepath = log_dir() + f'weights.{{epoch:03d}}' + f'-sb@{k}-{{sb@{k}}}' + f'f1_mic-{{f1_mic:.3f}}' + f'-f1_mac-{{f1_mac:.3f}}',
+                    # filepath = log_dir() + f'weights.{{epoch:03d}}' + f'-sb@{k}-{{sb@{k}}}' + f'f1_mic-{{f1_mic:.3f}}' + f'-f1_mac-{{f1_mac:.3f}}',
+                    filepath = log_dir() + f'weights.{{epoch:03d}}' + f'val_precision-{{val_precision:.3f}}' + f'-val_recall-{{val_recall:.3f}}' + f'-val_f1-{{val_f1:.3f}}',
                     save_weights_only=True,
-                    monitor=f'sb@{k}',
+                    # monitor=f'sb@{k}',
+                    monitor=f'val_f1',
                     mode='max',
                     verbose=1,
                     save_freq='epoch',
@@ -398,8 +425,21 @@ def train(train_data, test_data=None):
                 # Validation
                 sampler.adj_info = val_adj_info
                 if FLAGS.validate_batch_size == -1:
-                    val_cost, val_f1_mic, val_f1_mac, duration = incremental_evaluate(sess, model, minibatch, FLAGS.batch_size)
+                    val_cost, val_f1_mic, val_f1_mac, val_precision, val_recall, val_f1, duration = incremental_evaluate(model, minibatch, FLAGS.batch_size, test=True)
+                    rdr_info = {
+                        'val_precision':val_precision, 
+                        'val_recall':val_recall, 
+                        'val_f1':val_f1, 
+                        'val_f1_mic':val_f1_mic,
+                        'val_f1_mac':val_f1_mac,
+                    }
+                    assert len(model.checkpoint_cb_ls) == 1
+                    cb = model.checkpoint_cb_ls[0]
+                    cb.epochs_since_last_save += 1
+                    cb._save_model(epoch, batch=None, logs=rdr_info)
+                    rdr_info = 0.0
                 else:
+                    val_precision, val_recall, val_f1 = 0.0, 0.0, 0.0
                     val_cost, val_f1_mic, val_f1_mac, duration, rdr_info = evaluate(model, minibatch, epoch, FLAGS.validate_batch_size)
                 sampler.adj_info = adj_info
                 epoch_val_costs[-1] += val_cost
@@ -419,6 +459,9 @@ def train(train_data, test_data=None):
                       "train_f1_mic=", "{:.5f}".format(train_f1_mic), 
                       "train_f1_mac=", "{:.5f}".format(train_f1_mac), 
                       "val_loss=", "{:.5f}".format(val_cost),
+                      "val_precision=", "{:.5f}".format(val_precision),
+                      "val_recall=", "{:.5f}".format(val_recall),
+                      "val_f1=", "{:.5f}".format(val_f1),
                       "val_f1_mic=", "{:.5f}".format(val_f1_mic), 
                       "val_f1_mac=", "{:.5f}".format(val_f1_mac), 
                       "SB=",rdr_info,
@@ -446,7 +489,7 @@ def train(train_data, test_data=None):
     #             format(val_cost, val_f1_mic, val_f1_mac, duration))
 
     print("Writing test set stats to file (don't peak!)")
-    val_cost, val_f1_mic, val_f1_mac, duration = incremental_evaluate(model, minibatch, FLAGS.batch_size, test=True)
+    val_cost, val_f1_mic, val_f1_mac, precision, recall, duration = incremental_evaluate(model, minibatch, FLAGS.batch_size, test=True)
     with open(log_dir() + "test_stats.txt", "w") as fp:
         fp.write("loss={:.5f} f1_micro={:.5f} f1_macro={:.5f}".
                 format(val_cost, val_f1_mic, val_f1_mac))
