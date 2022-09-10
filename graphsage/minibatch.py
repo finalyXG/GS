@@ -308,9 +308,9 @@ class NodeMinibatchIterator(object):
         self.batch_num += 1
         end_idx = min(start_idx + self.batch_size, len(self.train_nodes))
         batch_nodes = self.train_nodes[start_idx : end_idx]
-        batch_nodes_preserve = np.random.choice(batch_nodes, self.batch_size // 2)
-        batch_nodes_tp = np.random.choice(self.train_tp_nodes, self.batch_size // 2)
-        batch_nodes = np.concatenate([batch_nodes_preserve, batch_nodes_tp], axis=0)
+        # batch_nodes_preserve = np.random.choice(batch_nodes, self.batch_size // 2)
+        # batch_nodes_tp = np.random.choice(self.train_tp_nodes, self.batch_size // 2)
+        # batch_nodes = np.concatenate([batch_nodes_preserve, batch_nodes_tp], axis=0)
         return self.batch_feed_dict(batch_nodes)
 
     def incremental_embed_feed_dict(self, size, iter_num):
