@@ -92,39 +92,41 @@ def load_data(prefix, normalize=True, load_walks=False, remove_isolated_nodes=Fa
     node_id_val_set = set([node for node in G.nodes if (G.nodes[node]['test'] == False) and (G.nodes[node]['val'] == True) and (G.nodes[node]['real'] == True) ])
     node_id_te_set = set([node for node in G.nodes if (G.nodes[node]['test'] == True) and (G.nodes[node]['val'] == False) and (G.nodes[node]['real'] == True) ])
     node_real_set = {node:1 for node in G.nodes if (G.nodes[node]['real'] == True) }
-    # Remove connected components (cc) that does not contain real data
-    for cc in list(nx.connected_components(G)):
-        has_real = False # Assuming has real data first
-        fake_ls = []
-        for nc in cc:
-            if node_real_set.setdefault(nc, 0) == 1:
-                has_real = True
-            else:
-                fake_ls.append(nc)
-        if not has_real:
-            G.remove_nodes_from(list(cc))
 
-        # if len(fake_ls) > 0 and len(fake_ls) / len(cc) < 0.1 or len(fake_ls) / len(cc) > 0.9:
-        #     G.remove_nodes_from(fake_ls)
+    if remove_cc_by_rules:
+        # Remove connected components (cc) that does not contain real data
+        for cc in list(nx.connected_components(G)):
+            has_real = False # Assuming has real data first
+            fake_ls = []
+            for nc in cc:
+                if node_real_set.setdefault(nc, 0) == 1:
+                    has_real = True
+                else:
+                    fake_ls.append(nc)
+            if not has_real:
+                G.remove_nodes_from(list(cc))
 
-        # 🚩 Laurence 20220728 Improved filter >>>
-        elif len(fake_ls) > 0 and len(fake_ls) / len(cc) < 0.1 or len(fake_ls) / len(cc) > 0.9:
-            subg_cc_real_nodes = [n for n in cc if G.nodes[n]['real']==True]
-            highest_degree_node = sorted([(n,G.degree(n)) for n in subg_cc_real_nodes], key=lambda x: x[1], reverse=True )[0][0]
-            path_ls = []
-            for n in subg_cc_real_nodes:
-                path_ls.extend(nx.shortest_path(G, highest_degree_node, n))
-            mini_cc_has_all_real_nodes = G.subgraph(set(path_ls))
-            nodes2remove = set(cc) - set(mini_cc_has_all_real_nodes.nodes)
-            G.remove_nodes_from(nodes2remove)
-        # 🚩 Laurence 20220728 Improved filter <<<
+            # if len(fake_ls) > 0 and len(fake_ls) / len(cc) < 0.1 or len(fake_ls) / len(cc) > 0.9:
+            #     G.remove_nodes_from(fake_ls)
+
+            # 🚩 Laurence 20220728 Improved filter >>>
+            elif len(fake_ls) > 0 and len(fake_ls) / len(cc) < 0.1 or len(fake_ls) / len(cc) > 0.9:
+                subg_cc_real_nodes = [n for n in cc if G.nodes[n]['real']==True]
+                highest_degree_node = sorted([(n,G.degree(n)) for n in subg_cc_real_nodes], key=lambda x: x[1], reverse=True )[0][0]
+                path_ls = []
+                for n in subg_cc_real_nodes:
+                    path_ls.extend(nx.shortest_path(G, highest_degree_node, n))
+                mini_cc_has_all_real_nodes = G.subgraph(set(path_ls))
+                nodes2remove = set(cc) - set(mini_cc_has_all_real_nodes.nodes)
+                G.remove_nodes_from(nodes2remove)
+            # 🚩 Laurence 20220728 Improved filter <<<
 
 
-        # 🚩 Laurence 20220728 Double safty to remove 0-degree nodes >>>
-        if remove_isolated_nodes:
-            n_isolated_ls = [n for n in G.nodes if G.degree(n)==0]
-            G.remove_nodes_from(n_isolated_ls)
-        # 🚩 Laurence 20220728 Double safty to remove 0-degree nodes <<<
+            # 🚩 Laurence 20220728 Double safty to remove 0-degree nodes >>>
+            if remove_isolated_nodes:
+                n_isolated_ls = [n for n in G.nodes if G.degree(n)==0]
+                G.remove_nodes_from(n_isolated_ls)
+            # 🚩 Laurence 20220728 Double safty to remove 0-degree nodes <<<
 
 
     ## Make sure the graph has edge train_removed annotations
