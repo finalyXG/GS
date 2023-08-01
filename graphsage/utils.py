@@ -127,11 +127,16 @@ def load_data(prefix, normalize=True, load_walks=False, remove_isolated_nodes=Fa
     ## Make sure the graph has edge train_removed annotations
     ## (some datasets might already have this..)
     print("Loaded data.. now preprocessing..")
-    for edge in G.edges():
-        if (G.nodes[edge[0]]['val'] or G.nodes[edge[1]]['val'] or
-            G.nodes[edge[0]]['test'] or G.nodes[edge[1]]['test']):
-            G[edge[0]][edge[1]]['train_removed'] = True
-        else:
+    if set_train_removed_by_rules:
+        print("Setting 'train_removed' by internal rule...")
+        for edge in G.edges():
+            if (G.nodes[edge[0]]['val'] or G.nodes[edge[1]]['val'] or
+                G.nodes[edge[0]]['test'] or G.nodes[edge[1]]['test']):
+                G[edge[0]][edge[1]]['train_removed'] = True
+            else:
+                G[edge[0]][edge[1]]['train_removed'] = False
+    else:
+        for edge in G.edges():
             G[edge[0]][edge[1]]['train_removed'] = False
 
     if normalize and not feats is None:
