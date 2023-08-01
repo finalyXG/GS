@@ -17,9 +17,12 @@ minor = version_info[1]
 WALK_LEN=5
 N_WALKS=50
 
-def load_data(prefix, normalize=True, load_walks=False, remove_isolated_nodes=False):
-    G_data = json.load(open(prefix + "-G.json"))
-    G = json_graph.node_link_graph(G_data)
+def load_data(prefix, normalize=True, load_walks=False, remove_isolated_nodes=False, remove_cc_by_rules=True, set_train_removed_by_rules=True, graph_loader=None):
+    if graph_loader != None:
+        G = graph_loader.g_tr_te
+    else:
+        G_data = json.load(open(prefix + "-G.json"))
+        G = json_graph.node_link_graph(G_data)
     if isinstance(next(iter(G.nodes())), int):
         conversion = lambda n : int(n)
     else:
