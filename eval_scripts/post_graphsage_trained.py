@@ -70,7 +70,7 @@ def get_df_gs_info(train_data, FLAGS, NodeMinibatchIterator, model, nb_iter=1, i
             feed_dict, labels = minibatch_it.next_minibatch_feed_dict()
             outs = model.test_one_step(feed_dict, return_node_feat=True, return_sampled_nodes=True, return_others=True)
             pred_ls += outs[0].numpy().tolist()
-            labels_ls += labels[:,1].tolist()
+            labels_ls += np.argmax(labels, axis=1).tolist()
             feat_ls += outs[3].numpy().tolist()
             node_id_ls += feed_dict['batch'].numpy().tolist()
             # Laurence 20220713
