@@ -43,7 +43,7 @@ def get_tr_iter(train_data, FLAGS, NodeMinibatchIterator):
 
 
 # Get dataframe of training and testing graphsage features, predictions and labels 
-def get_df_gs_info(train_data, FLAGS, NodeMinibatchIterator, model, nb_iter=1):
+def get_df_gs_info(train_data, FLAGS, NodeMinibatchIterator, model, nb_iter=1, include_test=True):
 
     assert nb_iter >= 1
     df_tr_gs_info_ls = []
@@ -160,83 +160,84 @@ def get_df_gs_info(train_data, FLAGS, NodeMinibatchIterator, model, nb_iter=1):
     #     df_val_gs_info = df_val_gs_info.assign(**{f'graph_feat_agg_{nb_iter}': graph_feat_agg})
     #     df_val_gs_info = df_val_gs_info.assign(**{f'graph_pred_raw_{nb_iter}': graph_pred_raw})
 
-    
-    # Set current adj matrix for testing >>>
-    for l in model.layer_infos:  # Laurence 20220713
-        l.neigh_sampler.adj_info = minibatch_it.test_adj
-    # Set current adj matrix for testing <<<
-    for i in tqdm.tqdm(range(nb_iter), desc="Generating test info:"):
-        feed_dict_te, labels_te = minibatch_it.node_val_feed_dict(test=True)
-        outs_te = model.test_one_step(feed_dict_te, return_node_feat=True, return_sampled_nodes=True, return_others=True)
+    df_te_gs_info = pd.DataFrame()
+    if include_test:
+        # Set current adj matrix for testing >>>
+        for l in model.layer_infos:  # Laurence 20220713
+            l.neigh_sampler.adj_info = minibatch_it.test_adj
+        # Set current adj matrix for testing <<<
+        for i in tqdm.tqdm(range(nb_iter), desc="Generating test info:"):
+            feed_dict_te, labels_te = minibatch_it.node_val_feed_dict(test=True)
+            outs_te = model.test_one_step(feed_dict_te, return_node_feat=True, return_sampled_nodes=True, return_others=True)
 
-        # Laurence 20220706
-        node_id_ls = [idx2id[n] for n in feed_dict_te['batch'].numpy().tolist()]
-        node_feat_ls = [minibatch_it.G.nodes[n]['feat'] for n in node_id_ls]
-        node_feat_cs_ls = [sum(e) for e in node_feat_ls]
+            # Laurence 20220706
+            node_id_ls = [idx2id[n] for n in feed_dict_te['batch'].numpy().tolist()]
+            node_feat_ls = [minibatch_it.G.nodes[n]['feat'] for n in node_id_ls]
+            node_feat_cs_ls = [sum(e) for e in node_feat_ls]
 
-        node_neigh_id_ls_dict = {}
-        # Laurence 20220713
-        samples_idx = outs_te[2][0]
-        bs = tf.shape(samples_idx[0]).numpy()[0]
-        acc_shape = [bs]
-        acc_mul = bs
-        hop = 0
-        for node_idx_ls in samples_idx[1:]:
-            tmp_len = len(node_idx_ls)
-            acc_shape += [tmp_len // acc_mul]
-            acc_mul = tmp_len
-            node_idx_ls_np = [idx2id[n] for n in node_idx_ls.numpy()]
-            node_id_tr = tf.reshape(node_idx_ls_np, acc_shape)
-            node_neigh_id_ls_dict.setdefault(hop, [])
-            node_neigh_id_ls_dict[hop] += node_id_tr.numpy().tolist()
-            hop += 1
+            node_neigh_id_ls_dict = {}
+            # Laurence 20220713
+            samples_idx = outs_te[2][0]
+            bs = tf.shape(samples_idx[0]).numpy()[0]
+            acc_shape = [bs]
+            acc_mul = bs
+            hop = 0
+            for node_idx_ls in samples_idx[1:]:
+                tmp_len = len(node_idx_ls)
+                acc_shape += [tmp_len // acc_mul]
+                acc_mul = tmp_len
+                node_idx_ls_np = [idx2id[n] for n in node_idx_ls.numpy()]
+                node_id_tr = tf.reshape(node_idx_ls_np, acc_shape)
+                node_neigh_id_ls_dict.setdefault(hop, [])
+                node_neigh_id_ls_dict[hop] += node_id_tr.numpy().tolist()
+                hop += 1
 
-        attn_w_ls_dict = {}
-        # Laurence 20220715: add attention
-        attn_w = outs_te[4]['attn_w']
-        attn_w_reshape = {}
-        bs = outs_te[0].shape[0]
-        for k,attn_by_layer in attn_w.items():
-            agg_name = f'attn_agg_{k}'
-            acc_mul = 1
-            front_shape = []
-            attn_w_reshape[agg_name] = {}
-            for hop, attn_by_hop in attn_by_layer.items():
-                hop_name = f'hop_{hop}'
-                divide = attn_by_hop.shape[0] // acc_mul
-                acc_mul *= divide
-                front_shape.append(divide)
-                new_shape = front_shape + attn_by_hop.shape[1:]
-                attn_w_reshape[agg_name][hop_name] = tf.reshape(attn_by_hop, new_shape).numpy().tolist()
-                col_name = f'{agg_name}_{hop_name}'
-                attn_w_ls_dict.setdefault(col_name, [])
-                attn_w_ls_dict[col_name] += attn_w_reshape[agg_name][hop_name] 
-                # print(front_shape, acc_mul, new_shape)
+            attn_w_ls_dict = {}
+            # Laurence 20220715: add attention
+            attn_w = outs_te[4]['attn_w']
+            attn_w_reshape = {}
+            bs = outs_te[0].shape[0]
+            for k,attn_by_layer in attn_w.items():
+                agg_name = f'attn_agg_{k}'
+                acc_mul = 1
+                front_shape = []
+                attn_w_reshape[agg_name] = {}
+                for hop, attn_by_hop in attn_by_layer.items():
+                    hop_name = f'hop_{hop}'
+                    divide = attn_by_hop.shape[0] // acc_mul
+                    acc_mul *= divide
+                    front_shape.append(divide)
+                    new_shape = front_shape + attn_by_hop.shape[1:]
+                    attn_w_reshape[agg_name][hop_name] = tf.reshape(attn_by_hop, new_shape).numpy().tolist()
+                    col_name = f'{agg_name}_{hop_name}'
+                    attn_w_ls_dict.setdefault(col_name, [])
+                    attn_w_ls_dict[col_name] += attn_w_reshape[agg_name][hop_name] 
+                    # print(front_shape, acc_mul, new_shape)
 
-        df_te_gs_info = pd.DataFrame({
-            # 'id': feed_dict_te['batch'].numpy().tolist(), # Laurence 20220706
-            'id': [n for n in node_id_ls],
-            'graph_feat':outs_te[3].numpy().tolist(),
-            'graph_pred':outs_te[0].numpy().tolist(),
-            'node_feat': node_feat_ls,
-            'node_feat_check_sum': node_feat_cs_ls,
-            'label': labels_te[:,1].tolist()}).assign(is_train=False)
+            df_te_gs_info = pd.DataFrame({
+                # 'id': feed_dict_te['batch'].numpy().tolist(), # Laurence 20220706
+                'id': [n for n in node_id_ls],
+                'graph_feat':outs_te[3].numpy().tolist(),
+                'graph_pred':outs_te[0].numpy().tolist(),
+                'node_feat': node_feat_ls,
+                'node_feat_check_sum': node_feat_cs_ls,
+                'label': labels_te[:,1].tolist()}).assign(is_train=False)
 
-        # Laurence 20220713
-        for k, v in node_neigh_id_ls_dict.items():
-            df_te_gs_info = df_te_gs_info.assign(**{f'neigh_{k}': v})
+            # Laurence 20220713
+            for k, v in node_neigh_id_ls_dict.items():
+                df_te_gs_info = df_te_gs_info.assign(**{f'neigh_{k}': v})
 
-        # Laurence 20220715
-        for k, v in attn_w_ls_dict.items():
-            df_te_gs_info = df_te_gs_info.assign(**{k: v})
+            # Laurence 20220715
+            for k, v in attn_w_ls_dict.items():
+                df_te_gs_info = df_te_gs_info.assign(**{k: v})
+                
             
-        
-        df_te_gs_info_ls.append(df_te_gs_info)
-    graph_feat_agg = np.mean(np.stack([np.stack(df['graph_feat'].values) for df in df_te_gs_info_ls]), axis=0).tolist()
-    graph_pred_raw = np.stack([np.stack(df['graph_pred'].values) for df in df_te_gs_info_ls])
-    graph_pred_raw = np.transpose(graph_pred_raw, (1,0,2)).tolist()
-    df_te_gs_info = df_te_gs_info.assign(**{f'graph_feat_agg_{nb_iter}': graph_feat_agg})
-    df_te_gs_info = df_te_gs_info.assign(**{f'graph_pred_raw_{nb_iter}': graph_pred_raw})
+            df_te_gs_info_ls.append(df_te_gs_info)
+        graph_feat_agg = np.mean(np.stack([np.stack(df['graph_feat'].values) for df in df_te_gs_info_ls]), axis=0).tolist()
+        graph_pred_raw = np.stack([np.stack(df['graph_pred'].values) for df in df_te_gs_info_ls])
+        graph_pred_raw = np.transpose(graph_pred_raw, (1,0,2)).tolist()
+        df_te_gs_info = df_te_gs_info.assign(**{f'graph_feat_agg_{nb_iter}': graph_feat_agg})
+        df_te_gs_info = df_te_gs_info.assign(**{f'graph_pred_raw_{nb_iter}': graph_pred_raw})
 
 
     df_gs_info = pd.concat([
