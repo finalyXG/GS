@@ -68,6 +68,8 @@ flags.DEFINE_integer('max_total_steps', 10**10, "Maximum total number of iterati
 flags.DEFINE_boolean('remove_isolated_nodes', True, 'whether to remove nodes with degree=0')
 flags.DEFINE_list('k_of_sb', [0,2,4,8], 'The value of k of sb@k')
 flags.DEFINE_boolean('train_return_model_once_ready', False, 'Whether to return model without training in train()')
+flags.DEFINE_boolean('disable_concat_to_ori_feature', False, 'Whether to disable concatenating learned aggregated features to the original node feature')
+flags.DEFINE_float('T', 1.0, 'Temperature used in graphsage attention')
 
 # For analysis flow
 # Laurence 20220809

@@ -342,8 +342,8 @@ class SampleAndAggregate(GeneralizedModel):
                 next_hidden.append(h)
             hidden = next_hidden
 
-        
-        hidden = [tf.concat([node_feat_ori[0], hidden[0]], axis=-1)]
+        if FLAGS.disable_concat_to_ori_feature == False:
+            hidden = [tf.concat([node_feat_ori[0], hidden[0]], axis=-1)]
         if len(attn_w_hop_layer_hop.keys()) > 0:
             return hidden[0], aggregators, attn_w_hop_layer_hop
         else:

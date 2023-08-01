@@ -91,8 +91,12 @@ class SupervisedGraphsage(models.SampleAndAggregate):
         self.outputs1 = tf.nn.l2_normalize(self.outputs1, 1)
 
         dim_mult = 2 if self.concat else 1
+        if FLAGS.disable_concat_to_ori_feature == False:
+            _dense_in_dims = dim_mult*self.dims[-1] + self.features.shape[1]
+        else:
+            _dense_in_dims = dim_mult*self.dims[-1]
         self.node_pred = layers.Dense(
-            dim_mult*self.dims[-1] + self.features.shape[1], 
+            _dense_in_dims, 
             self.num_classes, 
             dropout=self.placeholders['dropout'],
             act=lambda x : x)
