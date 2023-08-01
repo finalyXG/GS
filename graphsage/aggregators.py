@@ -67,8 +67,13 @@ class AttnAggregator(Layer):
         output = tf.matmul(attention_weight,V) # (batch size, num_heads, seq_length, depth)
         return output, attention_weight
 
-    def _call(self, inputs):
+    # def _call(self, inputs, **kwargs):
+    def __call__(self, inputs, **kwargs):
         self_vecs, neigh_vecs = inputs
+        if 'dropout' in kwargs.keys():
+            neigh_vecs = tf.nn.dropout(neigh_vecs, rate=1 - (1-self.dropout))
+            self_vecs = tf.nn.dropout(self_vecs, rate=1 - (1-self.dropout))
+
         # self_feat is Q, neigh feat is K & V
         batch_size = tf.shape(self_vecs)[0]
         q = self.wq(self_vecs) # (batch size, unit)
@@ -130,11 +135,12 @@ class MeanAggregator(Layer):
         self.input_dim = input_dim
         self.output_dim = output_dim
 
-    def _call(self, inputs):
+    def _call(self, inputs, **kwargs):
         self_vecs, neigh_vecs = inputs
 
-        neigh_vecs = tf.nn.dropout(neigh_vecs, rate=1 - (1-self.dropout))
-        self_vecs = tf.nn.dropout(self_vecs, rate=1 - (1-self.dropout))
+        if 'dropout' in kwargs.keys():
+            neigh_vecs = tf.nn.dropout(neigh_vecs, rate=1 - (1-self.dropout))
+            self_vecs = tf.nn.dropout(self_vecs, rate=1 - (1-self.dropout))
         neigh_means = tf.reduce_mean(input_tensor=neigh_vecs, axis=1)
        
         # [nodes] x [out_dim]
