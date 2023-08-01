@@ -165,10 +165,10 @@ class SupervisedGraphsage(models.SampleAndAggregate):
 
             if FLAGS.model == 'graphsage_attn':
                 outputs1, _, _ = self.aggregate(samples1, [self.features], self.dims, num_samples,
-                    support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size)
+                    support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size, dropout=self.placeholders['dropout'])
             else:
                 outputs1, _ = self.aggregate(samples1, [self.features], self.dims, num_samples,
-                    support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size)
+                    support_sizes1, batch_size=feed_dict['batch_size'], aggregators=self.aggregators, concat=self.concat, model_size=self.model_size, dropout=self.placeholders['dropout'])
 
             dim_mult = 2 if self.concat else 1
             # node_pred = layers.Dense(dim_mult*self.dims[-1], self.num_classes,
