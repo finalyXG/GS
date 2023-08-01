@@ -243,8 +243,8 @@ def train(train_data, test_data=None):
     placeholders = {
         'labels' : tf.cast(tf.compat.v1.distributions.Bernoulli(probs=0.7).sample(sample_shape=(1, num_classes)), tf.float32),
         'batch' : tf.constant(list(G.nodes)[:1], dtype=tf.int32, name='batch1'),
-        'dropout': tf.constant(0., dtype=tf.float32, name='batch1'),
-        'batch_size' : tf.constant(FLAGS.batch_size, dtype=tf.float32, name='batch1'),
+        'dropout': tf.constant(FLAGS.dropout, dtype=tf.float32, name='dropout'),
+        'batch_size' : tf.constant(FLAGS.batch_size, dtype=tf.float32, name='batch_size'),
     }
     minibatch = NodeMinibatchIterator(G, 
             id_map,

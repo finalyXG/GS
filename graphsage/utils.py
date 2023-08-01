@@ -8,6 +8,7 @@ import os
 
 import networkx as nx
 from networkx.readwrite import json_graph
+from sklearn.preprocessing import StandardScaler
 version_info = list(map(int, nx.__version__.split('.')))
 major = version_info[0]
 minor = version_info[1]
@@ -134,7 +135,6 @@ def load_data(prefix, normalize=True, load_walks=False, remove_isolated_nodes=Fa
             G[edge[0]][edge[1]]['train_removed'] = False
 
     if normalize and not feats is None:
-        from sklearn.preprocessing import StandardScaler
         train_ids = np.array([id_map[n] for n in list(G.nodes()) if not G.nodes[n]['val'] and not G.nodes[n]['test']])
         train_feats = feats[train_ids]
         scaler = StandardScaler()
