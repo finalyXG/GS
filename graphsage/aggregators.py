@@ -6,13 +6,14 @@ from .inits import glorot, zeros
 class AttnAggregator(Layer): 
     def __init__(self, input_dim, output_dim, num_heads=4, neigh_input_dim=None,
         dropout=0.,bias=False, act=tf.nn.relu,
-        name=None, concat=False, **kwargs):
+        name=None, concat=False, T=1.0, **kwargs):
         super(AttnAggregator, self).__init__(**kwargs) 
         
         self.dropout = dropout
         self.bias = bias
         self.act = act
         self.concat = concat
+        self.T = T
 
         if neigh_input_dim is None:
             neigh_input_dim = input_dim
@@ -55,6 +56,8 @@ class AttnAggregator(Layer):
         res = tf.transpose(tmp, perm=[0,1,3,2])
         return res
     
+    # def scaled_dot_product_attention(self,Q,K,V, T=1.0):
+    # def scaled_dot_product_attention(self,Q,K,V, T=0.1):
     def scaled_dot_product_attention(self,Q,K,V):
 
         matmul_qk = tf.matmul(Q,K,transpose_b=True)
@@ -63,7 +66,7 @@ class AttnAggregator(Layer):
         mask = self.pad_mask(K)
         scaled_qk += mask*-1e9 
 
-        attention_weight = tf.nn.softmax(scaled_qk,axis=-1) # (batch size, num_heads, seq_length, seq_length)
+        attention_weight = tf.nn.softmax(scaled_qk/self.T,axis=-1) # (batch size, num_heads, seq_length, seq_length)
         output = tf.matmul(attention_weight,V) # (batch size, num_heads, seq_length, depth)
         return output, attention_weight
 
