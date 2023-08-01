@@ -89,15 +89,20 @@ def calc_f1(y_true, y_pred):
         y_pred = tf.where(y_pred > 0.5, 1, 0).numpy()
     return metrics.f1_score(y_true, y_pred, average="micro"), metrics.f1_score(y_true, y_pred, average="macro")
 
-def calc_precision_recall(y_true, y_pred):
+def calc_acc_precision_recall(y_true, y_pred):
+    is_multi_label = True if y_true.shape[1] > 2 else False
+    average = 'micro' if is_multi_label else 'binary'    
     if not FLAGS.sigmoid:
         y_true = np.argmax(y_true, axis=1)
         y_pred = np.argmax(y_pred, axis=1)
     else:
         y_pred = tf.where(y_pred > 0.5, 1, 0).numpy()
     
-    return metrics.precision_score(y_true, y_pred), metrics.recall_score(y_true, y_pred), metrics.f1_score(y_true, y_pred)
-
+    s1 = metrics.accuracy_score(y_true, y_pred)
+    s2 = metrics.precision_score(y_true, y_pred, average=average)
+    s3 = metrics.recall_score(y_true, y_pred, average=average)
+    s4 =metrics.f1_score(y_true, y_pred, average=average)
+    return s1,s2,s3,s4
 
 def calc_microavg_eval_measures(tp, fn, fp):
     tp_sum = sum(tp.values()).item()
