@@ -280,7 +280,7 @@ class SampleAndAggregate(GeneralizedModel):
 
 
     def aggregate(self, samples, input_features, dims, num_samples, support_sizes, batch_size=None,
-            aggregators=None, name=None, concat=False, model_size="small"):
+            aggregators=None, name=None, concat=False, model_size="small", **kwargs):
         """ At each layer, aggregate hidden representations of neighbors to compute the hidden representations 
             at next layer.
         Args:
@@ -333,12 +333,12 @@ class SampleAndAggregate(GeneralizedModel):
                               dim_mult*dims[layer]]
                 if type(aggregator).__name__ == 'AttnAggregator':
                     h, attn_w = aggregator((hidden[hop],
-                                    tf.reshape(hidden[hop + 1], neigh_dims)))
+                                    tf.reshape(hidden[hop + 1], neigh_dims)), **kwargs)
                     attn_w_hop_layer_hop.setdefault(layer, {}).setdefault(hop, attn_w)
                     attn_w_hop_layer_hop.setdefault(f"feat_agg_{layer}", {}).setdefault(hop, h)
                 else:
                     h = aggregator((hidden[hop],
-                                    tf.reshape(hidden[hop + 1], neigh_dims)))
+                                    tf.reshape(hidden[hop + 1], neigh_dims)), **kwargs)
                 next_hidden.append(h)
             hidden = next_hidden
 
