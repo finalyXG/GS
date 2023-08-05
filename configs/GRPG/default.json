@@ -1,0 +1,12 @@
+{
+    "exp_name": "GRPG/sample",
+    "summary_dir": "./experiments",
+    "checkpoint_dir" : "./experiments",
+    "attn_file" : "./staging/stg_e/attn/GRPG_007_tr_te_attn_ind001.npy",
+    "graph_name": "GRPG_007_tr_te",
+    "df_gs_path": "./staging/stg_e/attn/df_GRPG_007_tr_te_attn_ind001.pkl",
+
+
+    "__dump__": ""
+
+}
