@@ -105,7 +105,7 @@ ENV/
 .ropeproject
 
 *.pickle
-*.pkl
+# *.pkl
 
 env_L.yaml
 .vscode/launch.json
@@ -117,9 +117,11 @@ sup-example_data/*
 example_data/
 notebook/neo4j_explore_G.ipynb
 notebook/
-staging/
+staging/stg_t
+staging/tmp_t
 graphsage/.vscode.json
 nwa_*.sh
 prototype_tree
 prototype_tree_old
 .history
+experiments
